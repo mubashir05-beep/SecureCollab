@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.0/.schema/devbox.schema.json",
+  "nixpkgs": {
+    "commit": "608d0cadfed240589a7eea422407a547ad626a14"
+  },
+  "packages": [
+    "go@1.22",
+    "rustc@latest",
+    "nodejs@20",
+    "sqlc@1.26",
+    "go-migrate@4.17.1",
+    "k6@0.50",
+    "terraform@1.8",
+    "kubernetes-helm@3.19.1",
+    "kubectl@1.29",
+    "golangci-lint@1.57",
+    "docker-compose@2.27",
+    "go-task@3.48.0",
+    "protobuf_25@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo 'SecureCollab dev environment ready'"
+    ],
+    "scripts": {
+      "dev":  "task dev",
+      "test": "task test"
+    }
+  }
+}

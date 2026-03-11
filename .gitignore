@@ -1,0 +1,36 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Build and deps
+bin/
+dist/
+out/
+node_modules/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.*
+
+# Go
+*.test
+coverage.out
+
+# Rust
+client/target/
+
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+
+# Python cache
+__pycache__/
+*.pyc

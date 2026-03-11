@@ -1,0 +1,66 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Format check
+        working-directory: services/gateway
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "Files need formatting:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: services/gateway
+        run: go vet ./...
+
+      - name: Test
+        working-directory: services/gateway
+        run: go test ./...
+
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Format check
+        working-directory: services/auth
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "Files need formatting:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: services/auth
+        run: go vet ./...
+
+      - name: Test
+        working-directory: services/auth
+        run: go test ./...

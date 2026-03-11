@@ -1,0 +1,74 @@
+services:
+  gateway:
+    build:
+      context: ../services/gateway
+    container_name: securecollab-gateway
+    ports:
+      - "8080:8080"
+
+  auth:
+    build:
+      context: ../services/auth
+    container_name: securecollab-auth
+    ports:
+      - "8081:8081"
+
+  postgres:
+    image: postgres:16
+    container_name: securecollab-postgres
+    environment:
+      POSTGRES_DB: securecollab
+      POSTGRES_USER: securecollab
+      POSTGRES_PASSWORD: securecollab
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: securecollab-redis
+    ports:
+      - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: securecollab-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - gateway
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: securecollab-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+      - loki
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: securecollab-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: securecollab-promtail
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./observability/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+
+volumes:
+  postgres_data:

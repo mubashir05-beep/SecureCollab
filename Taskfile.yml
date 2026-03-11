@@ -1,0 +1,90 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Start local base stack
+    cmd: docker compose -f deploy/docker-compose.yml up -d
+
+  dev:down:
+    desc: Stop local base stack
+    cmd: docker compose -f deploy/docker-compose.yml down
+
+  lint:gateway:
+    desc: Lint gateway code
+    dir: services/gateway
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
+  lint:auth:
+    desc: Lint auth service code
+    dir: services/auth
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
+  lint:
+    desc: Lint all services
+    cmds:
+      - task lint:gateway
+      - task lint:auth
+
+  test:gateway:
+    desc: Run gateway tests
+    dir: services/gateway
+    cmd: go test ./...
+
+  test:auth:
+    desc: Run auth service tests
+    dir: services/auth
+    cmd: go test ./...
+
+  test:client:
+    desc: Run client core Rust tests
+    dir: client/src-tauri
+    cmd: cargo test
+
+  test:
+    desc: Run all service tests
+    cmds:
+      - task test:gateway
+      - task test:auth
+      - task test:client
+
+  check:
+    desc: Run lint and tests
+    cmds:
+      - task lint
+      - task test
+
+  smoke:gateway:
+    desc: Check gateway health endpoint
+    cmd: |
+      curl -f http://localhost:8080/healthz
+    ignore_error: true
+
+  migrate:up:
+    desc: Run pending database migrations
+    cmd: migrate -path db/migrations -database "${DATABASE_URL}" up
+
+  migrate:down:
+    desc: Rollback last database migration
+    cmd: migrate -path db/migrations -database "${DATABASE_URL}" down 1
+
+  migrate:create:
+    desc: Create new migration file (name={{NAME}})
+    cmd: migrate create -ext sql -dir db/migrations -seq {{.NAME}}
+
+  load-test:
+    desc: Run k6 load test against gateway protected route
+    cmd: k6 run tests/load/gateway.js
+
+  tauri:dev:
+    desc: Run Tauri desktop app in development mode
+    dir: client
+    cmd: cargo tauri dev
+
+  tauri:build:
+    desc: Build Tauri desktop app binaries
+    dir: client
+    cmd: cargo tauri build
