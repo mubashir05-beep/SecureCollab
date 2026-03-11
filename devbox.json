@@ -6,6 +6,7 @@
   "packages": [
     "go@1.22",
     "rustc@latest",
+    "cargo@latest",
     "nodejs@20",
     "sqlc@1.26",
     "go-migrate@4.17.1",

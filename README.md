@@ -1,6 +1,8 @@
 # SecureCollab
 
-![SecureCollab Logo](docs/assets/securecollab-logo.svg)
+<p align="center">
+	<img src="docs/assets/securecollab-logo.svg" alt="SecureCollab logo" width="760" />
+</p>
 
 SecureCollab is a self-hosted, zero-knowledge team messaging platform built for organizations that cannot trust third-party chat infrastructure with sensitive internal communication.
 
@@ -32,28 +34,37 @@ SecureCollab is designed to provide:
 
 ## Tech Stack
 
-### Backend and APIs
+### Implemented Now
+
+#### Backend and APIs
 - Go 1.22
 - Gin
 - JWT (`golang-jwt/jwt`)
 
-### Data and State
+#### Data and State
 - PostgreSQL 16
 - Redis 7
 
-### Observability
+#### Observability
 - Prometheus
 - Grafana
 - Loki + Promtail
 
-### Developer Experience
+#### Client (Phase 2 Started)
+- Rust client core crate (`client/src-tauri`)
+- X25519 identity key generation (`x25519-dalek`)
+- Hash/key utilities (`sha2`, `base64`, `hex`)
+
+#### Developer Experience
 - Devbox (Nix-based, pinned toolchain)
 - Taskfile (`task`) workflows
 - Docker Compose local stack
-- k6 load test scaffolding
+- k6 load testing (`tests/load/gateway.js`)
+- golang-migrate tasks (`migrate:up`, `migrate:down`, `migrate:create`)
 
-### Roadmap Technologies (Next Phases)
+### Planned Next Technologies
 - Tauri (Rust + TypeScript) desktop client
+- React + TypeScript client UI shell
 - Kafka + Debezium + ClickHouse CDC pipeline
 - Vault / mTLS hardening for production deployment
 
@@ -61,7 +72,7 @@ SecureCollab is designed to provide:
 
 ```bash
 # 1) Enter pinned development shell
-cd /mnt/c/Users/Mubashir/Documents/GitHub/SecureCollab
+cd SecureCollab
 devbox shell
 
 # 2) Start local stack
@@ -92,7 +103,7 @@ task load-test
 
 - Phase 1 is in active completion work with gateway + auth implemented and tested.
 - Redis-backed gateway rate limiting is implemented with in-memory fallback for local resilience.
-- Phase 2 has started with client bootstrap planning in `client/README.md`.
+- Phase 2 has started in code with a tested Rust crypto foundation in `client/src-tauri`.
 
 ## Repository Layout
 

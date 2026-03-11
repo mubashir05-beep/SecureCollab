@@ -1,31 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="260" viewBox="0 0 1080 260" role="img" aria-labelledby="title desc">
   <title id="title">SecureCollab Logo</title>
-  <desc id="desc">Shield and linked nodes with SecureCollab wordmark.</desc>
+  <desc id="desc">Modern shield-chat icon with SecureCollab wordmark and tagline.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="halo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#22c55e" stop-opacity="0.12" />
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#1f2937" />
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#22c55e" />
-      <stop offset="100%" stop-color="#14b8a6" />
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#22c55e" />
     </linearGradient>
   </defs>
 
-  <rect x="0" y="0" width="960" height="240" rx="20" fill="url(#bg)" />
+  <g transform="translate(30,28)">
+    <circle cx="96" cy="96" r="90" fill="url(#halo)" />
 
-  <g transform="translate(36,34)">
-    <path d="M84 0 L150 28 V96 C150 142 119 178 84 194 C49 178 18 142 18 96 V28 Z" fill="#0b1220" stroke="url(#accent)" stroke-width="4"/>
-    <path d="M54 96 L76 118 L116 72" fill="none" stroke="url(#accent)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M96 10 L164 38 V98 C164 147 133 186 96 202 C59 186 28 147 28 98 V38 Z" fill="url(#ink)" />
+    <path d="M96 16 L158 42 V97 C158 142 130 178 96 193 C62 178 34 142 34 97 V42 Z" fill="none" stroke="url(#accent)" stroke-width="3.5" />
 
-    <circle cx="180" cy="46" r="9" fill="#22c55e"/>
-    <circle cx="220" cy="74" r="9" fill="#14b8a6"/>
-    <circle cx="176" cy="108" r="9" fill="#34d399"/>
-    <line x1="188" y1="50" x2="212" y2="70" stroke="#34d399" stroke-width="3"/>
-    <line x1="212" y1="78" x2="184" y2="104" stroke="#34d399" stroke-width="3"/>
-    <line x1="188" y1="108" x2="220" y2="78" stroke="#34d399" stroke-width="3" opacity="0.5"/>
+    <path d="M67 82 h58 a12 12 0 0 1 12 12 v18 a12 12 0 0 1 -12 12 h-20 l-10 12 -10 -12 h-18 a12 12 0 0 1 -12 -12 v-18 a12 12 0 0 1 12 -12 z" fill="#f8fafc" />
+    <circle cx="79" cy="103" r="4" fill="#0f172a" />
+    <circle cx="96" cy="103" r="4" fill="#0f172a" />
+    <circle cx="113" cy="103" r="4" fill="#0f172a" />
+
+    <circle cx="178" cy="62" r="8" fill="#06b6d4" />
+    <circle cx="206" cy="94" r="8" fill="#10b981" />
+    <circle cx="176" cy="124" r="8" fill="#22c55e" />
+    <line x1="184" y1="67" x2="200" y2="88" stroke="#34d399" stroke-width="2.5" />
+    <line x1="199" y1="100" x2="182" y2="119" stroke="#34d399" stroke-width="2.5" />
   </g>
 
-  <text x="320" y="106" fill="#f8fafc" font-size="56" font-family="Segoe UI, Arial, sans-serif" font-weight="700">SecureCollab</text>
-  <text x="320" y="150" fill="#94a3b8" font-size="24" font-family="Segoe UI, Arial, sans-serif">Zero-Knowledge Team Messaging Infrastructure</text>
+  <text x="300" y="112" fill="#0f172a" font-size="64" font-family="Trebuchet MS, Segoe UI, Arial, sans-serif" font-weight="700" letter-spacing="0.5">SecureCollab</text>
+  <text x="302" y="156" fill="#334155" font-size="24" font-family="Trebuchet MS, Segoe UI, Arial, sans-serif">Zero-Knowledge Team Messaging Infrastructure</text>
 </svg>

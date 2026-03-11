@@ -88,3 +88,18 @@ tasks:
     desc: Build Tauri desktop app binaries
     dir: client
     cmd: cargo tauri build
+
+  ui:install:
+    desc: Install Svelte UI dependencies
+    dir: client/ui
+    cmd: npm install
+
+  ui:dev:
+    desc: Run Svelte UI dev server
+    dir: client/ui
+    cmd: npm run dev
+
+  ui:test:
+    desc: Run Svelte UI tests
+    dir: client/ui
+    cmd: npm run test -- --run

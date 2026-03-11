@@ -11,6 +11,9 @@ bin/
 dist/
 out/
 node_modules/
+.devbox/
+client/ui/node_modules/
+client/ui/.vite/
 
 # Logs
 *.log
@@ -25,6 +28,12 @@ coverage.out
 
 # Rust
 client/target/
+client/src-tauri/target/
+
+# Misc temp
+tmp/
+*.tmp
+client/ui/coverage/
 
 # Terraform
 **/.terraform/
