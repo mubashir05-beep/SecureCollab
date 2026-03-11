@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="260" viewBox="0 0 1080 260" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 260 260" role="img" aria-labelledby="title desc">
   <title id="title">SecureCollab Logo</title>
-  <desc id="desc">Modern shield-chat icon with SecureCollab wordmark and tagline.</desc>
+  <desc id="desc">SecureCollab shield-chat icon mark.</desc>
 
   <defs>
     <linearGradient id="halo" x1="0" y1="0" x2="1" y2="1">
@@ -35,6 +35,4 @@
     <line x1="199" y1="100" x2="182" y2="119" stroke="#34d399" stroke-width="2.5" />
   </g>
 
-  <text x="300" y="112" fill="#0f172a" font-size="64" font-family="Trebuchet MS, Segoe UI, Arial, sans-serif" font-weight="700" letter-spacing="0.5">SecureCollab</text>
-  <text x="302" y="156" fill="#334155" font-size="24" font-family="Trebuchet MS, Segoe UI, Arial, sans-serif">Zero-Knowledge Team Messaging Infrastructure</text>
 </svg>

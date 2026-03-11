@@ -72,9 +72,21 @@
 </div>
 
 {#if showAuth}
-  <div class="fixed inset-0 z-50 grid place-content-center bg-slate-900/40 p-4" on:click={() => (showAuth = false)}>
+  <div
+    class="fixed inset-0 z-50 grid place-content-center bg-slate-900/40 p-4"
+    on:click={(e) => e.currentTarget === e.target && (showAuth = false)}
+    on:keydown={(e) => e.key === "Escape" && (showAuth = false)}
+    role="button"
+    tabindex="0"
+    aria-label="Close sign in dialog"
+  >
     <Panel>
-      <div class="w-[min(420px,90vw)]" on:click|stopPropagation>
+      <div
+        class="w-[min(420px,90vw)]"
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+      >
         <h3 class="text-lg font-bold">Sign In</h3>
         <p class="mb-4 text-sm text-shell-muted">Continue to your encrypted workspace.</p>
         <div class="space-y-3">

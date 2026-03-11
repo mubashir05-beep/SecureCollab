@@ -13,12 +13,18 @@ If you haven't installed Devbox yet, see [docs/SETUP.md](../SETUP.md) for comple
 ```bash
 devbox shell
 task dev
+
+# If port 8080 is already in use on your machine:
+GATEWAY_PORT=8082 task dev
 ```
 
 ## Verify Services
 ```bash
 # Gateway health
 curl http://localhost:8080/healthz
+
+# If you started with a custom gateway port:
+curl http://localhost:8082/healthz
 
 # Gateway metrics
 curl http://localhost:8080/metrics
