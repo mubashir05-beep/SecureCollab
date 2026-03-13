@@ -1,0 +1,60 @@
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.8
+    container_name: securecollab-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - "1G"
+      - --reserve-memory
+      - "0M"
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --pandaproxy-addr
+      - 0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - redpanda:8082
+    ports:
+      - "${REDPANDA_PORT:-9092}:9092"
+
+  connect:
+    image: debezium/connect:2.7.1.Final
+    container_name: securecollab-connect
+    depends_on:
+      - redpanda
+      - postgres
+    environment:
+      BOOTSTRAP_SERVERS: redpanda:9092
+      GROUP_ID: securecollab-connect-cluster
+      CONFIG_STORAGE_TOPIC: securecollab_connect_configs
+      OFFSET_STORAGE_TOPIC: securecollab_connect_offsets
+      STATUS_STORAGE_TOPIC: securecollab_connect_statuses
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_REST_ADVERTISED_HOST_NAME: connect
+      PLUGIN_PATH: /kafka/connect
+    ports:
+      - "${CONNECT_PORT:-8085}:8083"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: securecollab-clickhouse
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+volumes:
+  clickhouse_data:

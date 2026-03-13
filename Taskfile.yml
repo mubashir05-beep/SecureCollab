@@ -1,13 +1,36 @@
 version: '3'
 
+dotenv:
+  - .env
+
 tasks:
   dev:
     desc: Start local base stack
-    cmd: GATEWAY_PORT=${GATEWAY_PORT:-8082} docker compose -f deploy/docker-compose.yml up -d
+    cmd: docker compose -f deploy/docker-compose.yml up -d
 
   dev:down:
     desc: Stop local base stack
-    cmd: GATEWAY_PORT=${GATEWAY_PORT:-8082} docker compose -f deploy/docker-compose.yml down
+    cmd: docker compose -f deploy/docker-compose.yml down
+
+  cdc:up:
+    desc: Start local CDC overlay (Redpanda, Debezium Connect, ClickHouse)
+    cmd: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.cdc.yml up -d redpanda connect clickhouse
+
+  cdc:down:
+    desc: Stop local CDC overlay
+    cmd: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.cdc.yml down
+
+  cdc:register:
+    desc: Register Postgres Debezium connector for encrypted_messages
+    cmd: |
+      curl -sS -X POST "${CDC_CONNECT_URL:-http://localhost:${CONNECT_PORT:-8085}}/connectors" \
+        -H "Content-Type: application/json" \
+        --data @pipeline/debezium/connectors/postgres-encrypted-messages.json
+
+  cdc:status:
+    desc: Check Debezium connector status
+    cmd: |
+      curl -sS "${CDC_CONNECT_URL:-http://localhost:${CONNECT_PORT:-8085}}/connectors/securecollab-postgres-encrypted-messages/status"
 
   lint:gateway:
     desc: Lint gateway code
@@ -23,11 +46,35 @@ tasks:
       - gofmt -l .
       - go vet ./...
 
+  lint:keydist:
+    desc: Lint key distribution service code
+    dir: services/keydist
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
+  lint:messaging:
+    desc: Lint messaging service code
+    dir: services/messaging
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
+  lint:analytics:
+    desc: Lint analytics service code
+    dir: services/analytics
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
   lint:
     desc: Lint all services
     cmds:
       - task lint:gateway
       - task lint:auth
+      - task lint:keydist
+      - task lint:messaging
+      - task lint:analytics
 
   test:gateway:
     desc: Run gateway tests
@@ -39,6 +86,41 @@ tasks:
     dir: services/auth
     cmd: go test ./...
 
+  test:auth:integration:
+    desc: Run auth integration tests for store and handlers (requires AUTH_TEST_DATABASE_URL)
+    dir: services/auth
+    cmd: go test -tags=integration ./internal/store ./internal/handlers
+
+  test:keydist:
+    desc: Run key distribution service tests
+    dir: services/keydist
+    cmd: go test ./...
+
+  test:keydist:integration:
+    desc: Run key distribution integration tests (requires KEYDIST_TEST_DATABASE_URL or DATABASE_URL)
+    dir: services/keydist
+    cmd: go test -tags=integration ./internal/handlers
+
+  test:messaging:
+    desc: Run messaging service tests
+    dir: services/messaging
+    cmd: go test ./...
+
+  test:messaging:integration:
+    desc: Run messaging integration tests (requires MESSAGING_TEST_DATABASE_URL or DATABASE_URL)
+    dir: services/messaging
+    cmd: go test -tags=integration ./internal/handlers
+
+  test:analytics:
+    desc: Run analytics service tests
+    dir: services/analytics
+    cmd: go test ./...
+
+  test:analytics:integration:
+    desc: Run analytics integration tests (requires ANALYTICS_TEST_DATABASE_URL or DATABASE_URL)
+    dir: services/analytics
+    cmd: go test -tags=integration ./internal/store ./internal/handlers
+
   test:client:
     desc: Run client core Rust tests
     dir: client/src-tauri
@@ -49,6 +131,9 @@ tasks:
     cmds:
       - task test:gateway
       - task test:auth
+      - task test:keydist
+      - task test:messaging
+      - task test:analytics
       - task test:client
 
   check:

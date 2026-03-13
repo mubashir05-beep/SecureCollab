@@ -1,0 +1,19 @@
+{
+  "name": "securecollab-postgres-encrypted-messages",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "securecollab",
+    "database.password": "securecollab",
+    "database.dbname": "securecollab",
+    "database.server.name": "securecollab",
+    "plugin.name": "pgoutput",
+    "publication.autocreate.mode": "filtered",
+    "slot.name": "securecollab_cdc_slot",
+    "table.include.list": "public.encrypted_messages",
+    "tombstones.on.delete": "false",
+    "include.schema.changes": "false",
+    "topic.prefix": "securecollab"
+  }
+}

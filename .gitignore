@@ -21,6 +21,7 @@ client/ui/.vite/
 # Env
 .env
 .env.*
+!.env.example
 
 # Go
 *.test

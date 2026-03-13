@@ -3,6 +3,9 @@ services:
     build:
       context: ../services/gateway
     container_name: securecollab-gateway
+    environment:
+      JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
 
@@ -10,18 +13,58 @@ services:
     build:
       context: ../services/auth
     container_name: securecollab-auth
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
     ports:
-      - "8081:8081"
+      - "${AUTH_PORT:-8081}:8081"
+
+  keydist:
+    build:
+      context: ../services/keydist
+    container_name: securecollab-keydist
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+    ports:
+      - "${KEYDIST_PORT:-8082}:8082"
+
+  messaging:
+    build:
+      context: ../services/messaging
+    container_name: securecollab-messaging
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+    ports:
+      - "${MESSAGING_PORT:-8083}:8083"
+
+  analytics:
+    build:
+      context: ../services/analytics
+    container_name: securecollab-analytics
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+    ports:
+      - "${ANALYTICS_PORT:-8084}:8084"
 
   postgres:
     image: postgres:16
     container_name: securecollab-postgres
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_replication_slots=10
     environment:
       POSTGRES_DB: securecollab
       POSTGRES_USER: securecollab
       POSTGRES_PASSWORD: securecollab
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -29,7 +72,7 @@ services:
     image: redis:7-alpine
     container_name: securecollab-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -37,7 +80,7 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
     ports:
-      - "9090:9090"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     depends_on:
@@ -47,7 +90,7 @@ services:
     image: grafana/grafana:11.0.0
     container_name: securecollab-grafana
     ports:
-      - "3000:3000"
+      - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -60,7 +103,7 @@ services:
     container_name: securecollab-loki
     command: -config.file=/etc/loki/local-config.yaml
     ports:
-      - "3100:3100"
+      - "${LOKI_PORT:-3100}:3100"
 
   promtail:
     image: grafana/promtail:3.0.0

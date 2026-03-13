@@ -12,14 +12,19 @@ export const options = {
 
 const baseUrl = __ENV.GATEWAY_BASE_URL || "http://localhost:8080";
 const token = __ENV.GATEWAY_JWT || "";
+const expectedResponse = http.expectedStatuses(200, 401, 429);
 
 export default function () {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
-  const res = http.get(`${baseUrl}/v1/protected/ping`, { headers });
+  const res = http.get(`${baseUrl}/v1/protected/ping`, {
+    headers,
+    responseCallback: expectedResponse,
+  });
 
-  // Load test is valid in either authorized (200) or unauthorized (401) mode.
+  // 200 (authorized), 401 (no token), and 429 (rate-limited) are valid outcomes.
   check(res, {
-    "status is 200 or 401": (r) => r.status === 200 || r.status === 401,
+    "status is 200, 401, or 429": (r) =>
+      r.status === 200 || r.status === 401 || r.status === 429,
   });
 
   sleep(0.1);

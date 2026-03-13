@@ -10,6 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 )
 
 type failingLimiter struct{}
@@ -121,6 +123,8 @@ func TestProtectedRoute_TokenBucketRateLimit_ReturnsTooManyRequests(t *testing.T
 }
 
 func TestRateLimitMiddleware_BackendUnavailable_ReturnsServiceUnavailable(t *testing.T) {
+	before := counterVecValue(t, rateLimitErrorsTotal, "sliding_window")
+
 	router := setupUnavailableLimiterRouter(t)
 	req := httptest.NewRequest(http.MethodGet, "/v1err/ping", nil)
 	req.Header.Set("Authorization", "Bearer "+generateTestToken(t, "test-secret", "user-x"))
@@ -129,6 +133,91 @@ func TestRateLimitMiddleware_BackendUnavailable_ReturnsServiceUnavailable(t *tes
 	code := res.Code
 	if code != http.StatusServiceUnavailable {
 		t.Fatalf("expected status %d, got %d", http.StatusServiceUnavailable, code)
+	}
+
+	after := counterVecValue(t, rateLimitErrorsTotal, "sliding_window")
+	if after-before != 1 {
+		t.Fatalf("expected gateway_rate_limiter_errors_total to increment by 1, got delta %v", after-before)
+	}
+}
+
+func TestRateLimitPolicy_PerUserIsolation(t *testing.T) {
+	secret := "test-secret"
+	router := NewRouterWithConfig(RouterConfig{
+		JWTSecret:             secret,
+		SlidingWindowLimit:    1,
+		SlidingWindowDuration: time.Minute,
+		TokenBucketCapacity:   100,
+		TokenBucketRefillRate: 100,
+	})
+
+	headersA := map[string]string{"Authorization": "Bearer " + generateTestToken(t, secret, "user-a")}
+	headersB := map[string]string{"Authorization": "Bearer " + generateTestToken(t, secret, "user-b")}
+
+	if got := serveProtectedRequest(router, headersA); got != http.StatusOK {
+		t.Fatalf("expected first user-a request status %d, got %d", http.StatusOK, got)
+	}
+	if got := serveProtectedRequest(router, headersA); got != http.StatusTooManyRequests {
+		t.Fatalf("expected second user-a request status %d, got %d", http.StatusTooManyRequests, got)
+	}
+	if got := serveProtectedRequest(router, headersB); got != http.StatusOK {
+		t.Fatalf("expected first user-b request status %d, got %d", http.StatusOK, got)
+	}
+}
+
+func TestRateLimitPolicy_PerIPFallback(t *testing.T) {
+	router := gin.New()
+	router.Use(rateLimitMiddleware(NewSlidingWindowLimiter(1, time.Minute), NewTokenBucketLimiter(100, 100)))
+	router.GET("/ip-only", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
+
+	first := httptest.NewRequest(http.MethodGet, "/ip-only", nil)
+	first.RemoteAddr = "10.1.1.9:1234"
+	firstRes := httptest.NewRecorder()
+	router.ServeHTTP(firstRes, first)
+	if firstRes.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, firstRes.Code)
+	}
+
+	second := httptest.NewRequest(http.MethodGet, "/ip-only", nil)
+	second.RemoteAddr = "10.1.1.9:4321"
+	secondRes := httptest.NewRecorder()
+	router.ServeHTTP(secondRes, second)
+	if secondRes.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, secondRes.Code)
+	}
+
+	third := httptest.NewRequest(http.MethodGet, "/ip-only", nil)
+	third.RemoteAddr = "10.1.1.10:5678"
+	thirdRes := httptest.NewRecorder()
+	router.ServeHTTP(thirdRes, third)
+	if thirdRes.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, thirdRes.Code)
+	}
+}
+
+func TestRateLimitedMetric_IncrementsOnTooManyRequests(t *testing.T) {
+	secret := "test-secret"
+	router := NewRouterWithConfig(RouterConfig{
+		JWTSecret:             secret,
+		SlidingWindowLimit:    1,
+		SlidingWindowDuration: time.Minute,
+		TokenBucketCapacity:   100,
+		TokenBucketRefillRate: 100,
+	})
+
+	headers := map[string]string{"Authorization": "Bearer " + generateTestToken(t, secret, "metric-user")}
+	path := "/v1/protected/ping"
+	before := counterVecValue(t, rateLimitedTotal, http.MethodGet, path)
+
+	serveProtectedRequest(router, headers)
+	code := serveProtectedRequest(router, headers)
+	if code != http.StatusTooManyRequests {
+		t.Fatalf("expected status %d, got %d", http.StatusTooManyRequests, code)
+	}
+
+	after := counterVecValue(t, rateLimitedTotal, http.MethodGet, path)
+	if after-before != 1 {
+		t.Fatalf("expected gateway_rate_limited_requests_total to increment by 1, got delta %v", after-before)
 	}
 }
 
@@ -168,4 +257,20 @@ func generateTestToken(t *testing.T, secret, userID string) string {
 		t.Fatalf("failed to generate token: %v", err)
 	}
 	return tokenString
+}
+
+func counterVecValue(t *testing.T, vec *prometheus.CounterVec, labels ...string) float64 {
+	t.Helper()
+
+	metric, err := vec.GetMetricWithLabelValues(labels...)
+	if err != nil {
+		t.Fatalf("get metric with labels %v: %v", labels, err)
+	}
+
+	pb := &dto.Metric{}
+	if err := metric.Write(pb); err != nil {
+		t.Fatalf("write metric protobuf: %v", err)
+	}
+
+	return pb.GetCounter().GetValue()
 }

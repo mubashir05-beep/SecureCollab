@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,6 +17,8 @@ type JWTClaims struct {
 
 // GenerateAccessToken creates a short-lived JWT token.
 func GenerateAccessToken(userID string) (string, error) {
+	secret := jwtSecretFromEnv()
+
 	claims := JWTClaims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -25,7 +28,7 @@ func GenerateAccessToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(SecretKey))
+	tokenString, err := token.SignedString([]byte(secret))
 	if err != nil {
 		return "", fmt.Errorf("sign token: %w", err)
 	}
@@ -34,9 +37,11 @@ func GenerateAccessToken(userID string) (string, error) {
 
 // ValidateToken verifies and parses a JWT token.
 func ValidateToken(tokenString string) (*JWTClaims, error) {
+	secret := jwtSecretFromEnv()
+
 	claims := &JWTClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return []byte(SecretKey), nil
+		return []byte(secret), nil
 	})
 
 	if err != nil || !token.Valid {
@@ -44,4 +49,11 @@ func ValidateToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return claims, nil
+}
+
+func jwtSecretFromEnv() string {
+	if value := os.Getenv("JWT_SECRET"); value != "" {
+		return value
+	}
+	return SecretKey
 }

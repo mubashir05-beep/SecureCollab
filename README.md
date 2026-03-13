@@ -30,6 +30,9 @@ SecureCollab is designed to provide:
 
 - `services/gateway`: Entry point, auth middleware, rate limiting, metrics.
 - `services/auth`: Register/login/refresh API and JWT flow.
+- `services/keydist`: Public key upload/fetch API for client bootstrap.
+- `services/messaging`: Encrypted payload ingestion and recipient inbox retrieval.
+- `services/analytics`: Message volume analytics endpoints for operational reporting.
 - `db/migrations`: Versioned schema changes.
 - `deploy/docker-compose.yml`: Local infrastructure and services.
 - `docs/`: Architecture notes, ADRs, runbooks.
@@ -119,8 +122,15 @@ task load-test
 
 ## Current Project Status
 
-- Phase 1 is in active completion work with gateway + auth implemented and tested.
+- Phase 1 core backend baseline is implemented with gateway + auth tested.
 - Redis-backed gateway rate limiting is implemented with in-memory fallback for local resilience.
+- Auth service now supports PostgreSQL-backed user persistence via `DATABASE_URL` with in-memory fallback for local/dev workflows.
+- Key Distribution Service now supports JWT-protected identity key upload/fetch with PostgreSQL-backed storage and integration tests.
+- Messaging Service now stores encrypted payload blobs only (ciphertext + nonce) with JWT-protected send/inbox APIs and integration tests.
+- Messaging Service now includes authenticated WebSocket inbox delivery for real-time recipient fan-out.
+- Integration coverage now includes two-identity encrypt/send/receive/decrypt validation and DB plaintext-absence checks for message payloads.
+- Analytics Service bootstrap is now implemented with Postgres-backed message-volume endpoint (`/v1/analytics/messages/volume`) and unit/integration tests.
+- Phase 3 CDC local infrastructure scaffold is added with Redpanda, Debezium Connect, and ClickHouse overlay compose + connector config.
 - Phase 2 has started in code with a tested Rust crypto foundation in `client/src-tauri` and a clean Svelte + Tailwind UI shell in `client/ui`.
 
 ## App Flow
@@ -158,8 +168,11 @@ tests/         Integration and load tests
 ## Documentation
 
 - Setup: `docs/SETUP.md`
+- Phase checklist: `docs/PHASE_CHECKLIST.md`
+- Phase 1 gate report: `docs/PHASE1_GATE_REPORT.md`
 - Architecture: `docs/architecture.md`
 - Local dev runbook: `docs/runbooks/local-dev.md`
+- CDC local runbook: `docs/runbooks/cdc-local.md`
 - ADR index: `docs/adr/README.md`
 
 ## License

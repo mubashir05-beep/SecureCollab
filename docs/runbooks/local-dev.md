@@ -9,6 +9,11 @@
 ## First-Time Setup
 If you haven't installed Devbox yet, see [docs/SETUP.md](../SETUP.md) for complete installation instructions.
 
+Create a local environment file from template:
+```bash
+cp .env.example .env
+```
+
 ## Bootstrap
 ```bash
 devbox shell
@@ -31,6 +36,18 @@ curl http://localhost:8080/metrics
 
 # Auth health
 curl http://localhost:8081/healthz
+
+# Key Distribution health
+curl http://localhost:8082/healthz
+
+# Messaging health
+curl http://localhost:8083/healthz
+
+# Analytics health
+curl http://localhost:8084/healthz
+
+# Analytics message-volume endpoint
+curl http://localhost:8084/v1/analytics/messages/volume
 ```
 
 ## Test Auth API
@@ -44,6 +61,10 @@ curl -X POST http://localhost:8081/register \
 curl -X POST http://localhost:8081/login \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","password":"secret"}'
+
+# Refresh access token (replace <access_token>)
+curl -X POST http://localhost:8081/refresh \
+  -H "Authorization: Bearer <access_token>"
 ```
 
 ## Quality Checks
@@ -51,6 +72,21 @@ curl -X POST http://localhost:8081/login \
 task lint
 task test
 task test:gateway
+
+# Auth integration tests for DB store + HTTP handlers
+task test:auth:integration
+
+# Key Distribution integration test for key bootstrap flow
+task test:keydist:integration
+
+# Messaging integration test for encrypted payload send/inbox flow
+task test:messaging:integration
+
+# Analytics tests
+task test:analytics
+
+# Analytics integration test for Postgres-backed message volume
+task test:analytics:integration
 ```
 
 ## Database Migrations
@@ -75,8 +111,30 @@ task load-test
 - Prometheus: http://localhost:9090
 - Loki: http://localhost:3100
 
+## CDC Bootstrap (Phase 3)
+```bash
+# Start CDC overlay services (Redpanda, Connect, ClickHouse)
+task cdc:up
+
+# Register the Postgres Debezium connector
+task cdc:register
+
+# Check connector status
+task cdc:status
+
+# Stop CDC overlay when done
+task cdc:down
+```
+
+Detailed CDC steps: `docs/runbooks/cdc-local.md`
+
 ## Notes
 - Gateway rate limiting uses Redis when `REDIS_ADDR` is set (for example `localhost:6379`).
 - Gateway falls back to in-memory limiter if Redis is unavailable.
-- Auth service uses in-memory token generation (no persistence yet).
+- Auth service uses PostgreSQL persistence when `DATABASE_URL` is set.
+- Auth service falls back to in-memory user storage when `DATABASE_URL` is not set.
+- Key Distribution service stores public keys in PostgreSQL when `DATABASE_URL` is set.
+- Messaging service stores ciphertext/nonce in PostgreSQL when `DATABASE_URL` is set.
+- Analytics service reads aggregated message volume from PostgreSQL when `DATABASE_URL` is set.
+- Task commands load variables from repo `.env` automatically.
 

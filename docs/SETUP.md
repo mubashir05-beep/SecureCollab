@@ -110,6 +110,9 @@ task --list
 ## Quick Start After Setup
 
 ```powershell
+# Create your local env file from the template (first time only)
+Copy-Item .env.example .env
+
 # Start all services
 task dev
 
