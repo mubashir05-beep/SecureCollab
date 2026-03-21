@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	analyticsStore, closeStore, err := store.NewAnalyticsStoreFromEnv()
+	analyticsStore, closeStore, err := store.NewAnalyticsStoreWithClickHouse()
 	if err != nil {
 		log.Fatalf("failed to initialize analytics store: %v", err)
 	}

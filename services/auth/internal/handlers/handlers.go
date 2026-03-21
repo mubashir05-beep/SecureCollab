@@ -25,6 +25,8 @@ type LoginRequest struct {
 
 type TokenResponse struct {
 	AccessToken string `json:"access_token"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
 }
 
 func NewRouter(userStore store.UserStore) *gin.Engine {
@@ -35,6 +37,7 @@ func NewRouter(userStore store.UserStore) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(corsMiddleware())
 
 	router.POST("/register", handleRegister(userStore))
 	router.POST("/login", handleLogin(userStore))
@@ -42,6 +45,19 @@ func NewRouter(userStore store.UserStore) *gin.Engine {
 	router.GET("/healthz", handleHealth)
 
 	return router
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	}
 }
 
 func handleHealth(c *gin.Context) {
@@ -78,7 +94,7 @@ func handleRegister(userStore store.UserStore) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusCreated, TokenResponse{AccessToken: token})
+		c.JSON(http.StatusCreated, TokenResponse{AccessToken: token, UserID: user.ID, Username: user.Username})
 	}
 }
 
@@ -111,7 +127,7 @@ func handleLogin(userStore store.UserStore) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, TokenResponse{AccessToken: token})
+		c.JSON(http.StatusOK, TokenResponse{AccessToken: token, UserID: user.ID, Username: user.Username})
 	}
 }
 

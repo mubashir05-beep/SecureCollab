@@ -26,7 +26,10 @@ type EncryptedMessage struct {
 	Ciphertext      []byte
 	Nonce           []byte
 	ContentType     string
+	ParentMessageID string
 	CreatedAt       time.Time
+	UpdatedAt       *time.Time
+	DeletedAt       *time.Time
 }
 
 type MessageStore interface {

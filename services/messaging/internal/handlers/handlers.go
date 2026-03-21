@@ -57,6 +57,7 @@ func NewRouter(messageStore store.MessageStore) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(corsMiddleware())
 
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -68,7 +69,16 @@ func NewRouter(messageStore store.MessageStore) *gin.Engine {
 	v1.GET("/messages/inbox", getInbox(messageStore))
 	v1.GET("/ws", websocketInbox(hub))
 
+	// Register rich messaging routes if store supports it
+	if richStore, ok := messageStore.(store.RichMessageStore); ok {
+		RegisterRichRoutes(v1, richStore, hub)
+	}
+
 	return r
+}
+
+func NewRichRouter(richStore store.RichMessageStore) *gin.Engine {
+	return NewRouter(richStore)
 }
 
 func sendEncryptedMessage(messageStore store.MessageStore, hub *deliveryHub) gin.HandlerFunc {
@@ -196,6 +206,19 @@ func toEnvelope(msg store.EncryptedMessage) MessageEnvelope {
 		NonceB64:        base64.StdEncoding.EncodeToString(msg.Nonce),
 		ContentType:     msg.ContentType,
 		CreatedAt:       msg.CreatedAt,
+	}
+}
+
+func corsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
 	}
 }
 

@@ -1,0 +1,120 @@
+{
+  "dashboard": {
+    "title": "SecureCollab CDC Analytics",
+    "uid": "securecollab-cdc",
+    "tags": ["securecollab", "cdc", "analytics"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": { "from": "now-6h", "to": "now" },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Message Volume (per hour)",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "targets": [
+          {
+            "rawSql": "SELECT hour AS time, sum(message_count) AS messages FROM message_volume_hourly WHERE hour >= toDateTime(now() - INTERVAL 24 HOUR) GROUP BY hour ORDER BY hour",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Messages by Channel",
+        "type": "barchart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "targets": [
+          {
+            "rawSql": "SELECT channel_id, count() AS total FROM encrypted_messages_analytics WHERE created_at >= now() - INTERVAL 24 HOUR GROUP BY channel_id ORDER BY total DESC LIMIT 10",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Top Senders (24h)",
+        "type": "table",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "targets": [
+          {
+            "rawSql": "SELECT sender_user_id, count() AS messages FROM encrypted_messages_analytics WHERE created_at >= now() - INTERVAL 24 HOUR GROUP BY sender_user_id ORDER BY messages DESC LIMIT 20",
+            "format": "table"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "CDC Ingestion Lag",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+        "targets": [
+          {
+            "rawSql": "SELECT ingested_at AS time, avg(date_diff('millisecond', created_at, ingested_at)) AS lag_ms FROM encrypted_messages_analytics WHERE ingested_at >= now() - INTERVAL 1 HOUR GROUP BY toStartOfMinute(ingested_at) AS ingested_at ORDER BY ingested_at",
+            "format": "time_series"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 1000 },
+                { "color": "red", "value": 5000 }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Debezium Connector Status",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "debezium_connector_status{connector=\"securecollab-postgres-encrypted-messages\"}",
+            "legendFormat": "{{status}}"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Kafka Consumer Lag",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "targets": [
+          {
+            "expr": "kafka_consumer_group_lag{group=\"clickhouse-cdc-consumer\"}",
+            "legendFormat": "{{topic}}-{{partition}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 100 },
+                { "color": "red", "value": 1000 }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

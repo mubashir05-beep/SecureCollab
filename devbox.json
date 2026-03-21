@@ -11,7 +11,6 @@
     "sqlc@1.26",
     "go-migrate@4.17.1",
     "k6@0.50",
-    "terraform@1.8",
     "kubernetes-helm@3.19.1",
     "kubectl@1.29",
     "golangci-lint@1.57",

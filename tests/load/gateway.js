@@ -1,12 +1,21 @@
 import http from "k6/http";
-import { check, sleep } from "k6";
+import { check } from "k6";
 
 export const options = {
-  vus: 20,
-  duration: "20s",
+  scenarios: {
+    throughput: {
+      executor: "constant-arrival-rate",
+      rate: 1200,
+      timeUnit: "1s",
+      duration: "30s",
+      preAllocatedVUs: 50,
+      maxVUs: 200,
+    },
+  },
   thresholds: {
     http_req_failed: ["rate<0.01"],
     http_req_duration: ["p(95)<200"],
+    http_reqs: ["rate>=1000"],
   },
 };
 
@@ -21,11 +30,8 @@ export default function () {
     responseCallback: expectedResponse,
   });
 
-  // 200 (authorized), 401 (no token), and 429 (rate-limited) are valid outcomes.
   check(res, {
     "status is 200, 401, or 429": (r) =>
       r.status === 200 || r.status === 401 || r.status === 429,
   });
-
-  sleep(0.1);
 }

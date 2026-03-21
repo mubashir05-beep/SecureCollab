@@ -1,0 +1,29 @@
+groups:
+  - name: securecollab_cdc
+    rules:
+      - alert: CDCConsumerLagHigh
+        expr: kafka_consumer_group_lag{group="clickhouse-cdc-consumer"} > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CDC consumer lag is high ({{ $value }} messages)"
+          description: "ClickHouse CDC consumer group 'clickhouse-cdc-consumer' has a lag exceeding 500 messages for more than 5 minutes."
+
+      - alert: CDCConsumerLagCritical
+        expr: kafka_consumer_group_lag{group="clickhouse-cdc-consumer"} > 5000
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CDC consumer lag is critical ({{ $value }} messages)"
+          description: "ClickHouse CDC consumer is severely behind. Investigate Kafka connectivity and ClickHouse health."
+
+      - alert: DebeziumConnectorDown
+        expr: absent(debezium_connector_status{connector="securecollab-postgres-encrypted-messages"}) == 1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Debezium connector is not reporting status"
+          description: "The Debezium Postgres connector for encrypted_messages has not reported status for 3 minutes."

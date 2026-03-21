@@ -2,10 +2,18 @@ import { render, screen } from "@testing-library/svelte";
 import App from "./App.svelte";
 
 describe("App", () => {
-  it("renders workspace shell", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("renders landing page when unauthenticated", () => {
     render(App);
     expect(screen.getByText("SecureCollab")).toBeTruthy();
-    expect(screen.getByText("Workspace Console")).toBeTruthy();
-    expect(screen.getByText("Sign In")).toBeTruthy();
+    expect(screen.getByText("Get Started")).toBeTruthy();
+  });
+
+  it("shows zero-knowledge tagline", () => {
+    render(App);
+    expect(screen.getByText(/zero-knowledge/i)).toBeTruthy();
   });
 });

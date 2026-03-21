@@ -8,6 +8,9 @@ services:
       REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      - redis
+    restart: on-failure
 
   auth:
     build:
@@ -18,6 +21,10 @@ services:
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
     ports:
       - "${AUTH_PORT:-8081}:8081"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
 
   keydist:
     build:
@@ -27,7 +34,11 @@ services:
       DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
     ports:
-      - "${KEYDIST_PORT:-8082}:8082"
+      - "${KEYDIST_PORT:-8083}:8082"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
 
   messaging:
     build:
@@ -37,7 +48,11 @@ services:
       DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
     ports:
-      - "${MESSAGING_PORT:-8083}:8083"
+      - "${MESSAGING_PORT:-8082}:8083"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
 
   analytics:
     build:
@@ -47,6 +62,24 @@ services:
       DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
     ports:
       - "${ANALYTICS_PORT:-8084}:8084"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
+
+  workspace:
+    build:
+      context: ../services/workspace
+    container_name: securecollab-workspace
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+    ports:
+      - "${WORKSPACE_PORT:-8086}:8086"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: on-failure
 
   postgres:
     image: postgres:16
@@ -67,6 +100,31 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securecollab -d securecollab"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  migrate:
+    image: postgres:16
+    container_name: securecollab-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../db/migrations:/migrations:ro
+    entrypoint: >
+      sh -c '
+        echo "Running migrations..."
+        for f in /migrations/*.up.sql; do
+          echo "Applying $$(basename $$f)..."
+          PGPASSWORD=securecollab psql -h postgres -U securecollab -d securecollab -f "$$f" 2>&1 || true
+        done
+        echo "Migrations complete."
+      '
+    restart: "no"
 
   redis:
     image: redis:7-alpine

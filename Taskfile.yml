@@ -67,6 +67,13 @@ tasks:
       - gofmt -l .
       - go vet ./...
 
+  lint:workspace:
+    desc: Lint workspace service code
+    dir: services/workspace
+    cmds:
+      - gofmt -l .
+      - go vet ./...
+
   lint:
     desc: Lint all services
     cmds:
@@ -75,6 +82,7 @@ tasks:
       - task lint:keydist
       - task lint:messaging
       - task lint:analytics
+      - task lint:workspace
 
   test:gateway:
     desc: Run gateway tests
@@ -111,6 +119,11 @@ tasks:
     dir: services/messaging
     cmd: go test -tags=integration ./internal/handlers
 
+  test:workspace:
+    desc: Run workspace service tests
+    dir: services/workspace
+    cmd: go test ./...
+
   test:analytics:
     desc: Run analytics service tests
     dir: services/analytics
@@ -134,6 +147,7 @@ tasks:
       - task test:keydist
       - task test:messaging
       - task test:analytics
+      - task test:workspace
       - task test:client
 
   check:

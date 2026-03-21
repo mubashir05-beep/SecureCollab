@@ -710,54 +710,6 @@
           "store_path": "/nix/store/m3lj15hwyyi7ywjszpcrzrncsshfyam7-sqlc-1.26.0"
         }
       }
-    },
-    "terraform@1.8": {
-      "last_modified": "2024-07-07T07:43:47Z",
-      "resolved": "github:NixOS/nixpkgs/b60793b86201040d9dee019a05089a9150d08b5b#terraform",
-      "source": "devbox-search",
-      "version": "1.8.5",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/1vchk9n2q7pvs3mzmzpm0mw1azgcrmc9-terraform-1.8.5",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/1vchk9n2q7pvs3mzmzpm0mw1azgcrmc9-terraform-1.8.5"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/f7yk1fsywl80pw6qr1idfwcr9bqjjwi1-terraform-1.8.5",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/f7yk1fsywl80pw6qr1idfwcr9bqjjwi1-terraform-1.8.5"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/hs031qn68yb750rsnr44ggxf27rw8nzx-terraform-1.8.5",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/hs031qn68yb750rsnr44ggxf27rw8nzx-terraform-1.8.5"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/sq5z1vqpb0mfgr7ynbd3q3119kj72yqp-terraform-1.8.5",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/sq5z1vqpb0mfgr7ynbd3q3119kj72yqp-terraform-1.8.5"
-        }
-      }
     }
   }
 }
