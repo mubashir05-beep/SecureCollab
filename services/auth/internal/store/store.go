@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -29,6 +30,7 @@ type UserStore interface {
 }
 
 type InMemoryUserStore struct {
+	mu         sync.Mutex
 	byUsername map[string]User
 	byEmail    map[string]User
 }
@@ -41,6 +43,9 @@ func NewInMemoryUserStore() *InMemoryUserStore {
 }
 
 func (s *InMemoryUserStore) CreateUser(_ context.Context, username, email, passwordHash string) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if _, ok := s.byUsername[username]; ok {
 		return User{}, ErrUserExists
 	}
@@ -60,6 +65,9 @@ func (s *InMemoryUserStore) CreateUser(_ context.Context, username, email, passw
 }
 
 func (s *InMemoryUserStore) GetUserByUsername(_ context.Context, username string) (User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	user, ok := s.byUsername[username]
 	if !ok {
 		return User{}, ErrUserNotFound

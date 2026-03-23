@@ -1,0 +1,181 @@
+{
+  "title": "SecureCollab Services Overview",
+  "uid": "securecollab-services",
+  "tags": ["securecollab"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "schemaVersion": 39,
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "custom",
+        "current": { "text": "All", "value": "$__all" },
+        "options": [
+          { "text": "All", "value": "$__all", "selected": true },
+          { "text": "gateway", "value": "gateway" },
+          { "text": "auth", "value": "auth" },
+          { "text": "keydist", "value": "keydist" },
+          { "text": "messaging", "value": "messaging" },
+          { "text": "workspace", "value": "workspace" },
+          { "text": "analytics", "value": "analytics" }
+        ],
+        "includeAll": true,
+        "multi": true,
+        "query": "gateway,auth,keydist,messaging,workspace,analytics"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Service Health",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "up{job=~\"$service\"}", "legendFormat": "{{ job }}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "DOWN", "color": "red" } }, "type": "value" },
+            { "options": { "1": { "text": "UP", "color": "green" } }, "type": "value" }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 2,
+      "title": "Request Rate by Service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "sum(rate(gateway_http_requests_total[5m]))", "legendFormat": "gateway" },
+        { "expr": "sum(rate(auth_http_requests_total[5m]))", "legendFormat": "auth" },
+        { "expr": "sum(rate(keydist_http_requests_total[5m]))", "legendFormat": "keydist" },
+        { "expr": "sum(rate(messaging_http_requests_total[5m]))", "legendFormat": "messaging" },
+        { "expr": "sum(rate(workspace_http_requests_total[5m]))", "legendFormat": "workspace" },
+        { "expr": "sum(rate(analytics_http_requests_total[5m]))", "legendFormat": "analytics" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 3,
+      "title": "p95 Latency by Service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum(rate(gateway_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "gateway" },
+        { "expr": "histogram_quantile(0.95, sum(rate(auth_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "auth" },
+        { "expr": "histogram_quantile(0.95, sum(rate(keydist_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "keydist" },
+        { "expr": "histogram_quantile(0.95, sum(rate(messaging_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "messaging" },
+        { "expr": "histogram_quantile(0.95, sum(rate(workspace_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "workspace" },
+        { "expr": "histogram_quantile(0.95, sum(rate(analytics_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "analytics" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "fillOpacity": 10 },
+          "thresholds": { "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.5 },
+            { "color": "red", "value": 2 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Error Rate (5xx) by Service",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        { "expr": "sum(rate(gateway_http_requests_total{status=~\"Internal Server Error\"}[5m]))", "legendFormat": "gateway" },
+        { "expr": "sum(rate(auth_http_requests_total{status=~\"Internal Server Error\"}[5m]))", "legendFormat": "auth" },
+        { "expr": "sum(rate(messaging_http_requests_total{status=~\"Internal Server Error\"}[5m]))", "legendFormat": "messaging" },
+        { "expr": "sum(rate(workspace_http_requests_total{status=~\"Internal Server Error\"}[5m]))", "legendFormat": "workspace" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 5,
+      "title": "Gateway Rate Limiting",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        { "expr": "sum(rate(gateway_rate_limited_requests_total[5m]))", "legendFormat": "rate-limited/s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 6,
+      "title": "WebSocket Connections (messaging)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 20 },
+      "targets": [
+        { "expr": "messaging_websocket_connections_active", "legendFormat": "active" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "steps": [
+            { "color": "blue", "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
+      "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    },
+    {
+      "id": 7,
+      "title": "Auth Requests Breakdown",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 20 },
+      "targets": [
+        { "expr": "sum(rate(auth_http_requests_total{path=\"/register\"}[5m]))", "legendFormat": "register" },
+        { "expr": "sum(rate(auth_http_requests_total{path=\"/login\"}[5m]))", "legendFormat": "login" },
+        { "expr": "sum(rate(auth_http_requests_total{path=\"/refresh\"}[5m]))", "legendFormat": "refresh" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20 } } }
+    },
+    {
+      "id": 8,
+      "title": "Workspace API Breakdown",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 20 },
+      "targets": [
+        { "expr": "sum(rate(workspace_http_requests_total{path=~\"/v1/workspaces.*\",method=\"POST\"}[5m]))", "legendFormat": "create" },
+        { "expr": "sum(rate(workspace_http_requests_total{path=~\"/v1/workspaces.*\",method=\"GET\"}[5m]))", "legendFormat": "list/get" },
+        { "expr": "sum(rate(workspace_http_requests_total{path=~\".*channels.*\",method=\"POST\"}[5m]))", "legendFormat": "create channel" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20 } } }
+    },
+    {
+      "id": 9,
+      "title": "Service Logs",
+      "type": "logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+      "targets": [
+        { "expr": "{job=\"docker\"} |~ \"(?i)(error|panic|fatal|warn)\"", "legendFormat": "" }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "dedupStrategy": "none", "enableLogDetails": true }
+    }
+  ]
+}

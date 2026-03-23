@@ -1,7 +1,8 @@
 <script>
   export let padded = true;
+  export let elevated = false;
 </script>
 
-<section class={`rounded-2xl border border-shell-line bg-shell-panel ${padded ? "p-4" : ""}`}>
+<section class="rounded-xl border border-shell-border {elevated ? 'bg-shell-elevated' : 'bg-shell-surface'} {padded ? 'p-4' : ''}">
   <slot />
 </section>

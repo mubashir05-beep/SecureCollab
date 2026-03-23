@@ -21,3 +21,27 @@ scrape_configs:
     static_configs:
       - targets:
           - auth:8081
+
+  - job_name: keydist
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - keydist:8082
+
+  - job_name: messaging
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - messaging:8083
+
+  - job_name: analytics
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - analytics:8084
+
+  - job_name: workspace
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - workspace:8086

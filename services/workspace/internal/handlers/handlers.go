@@ -2,17 +2,46 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"securecollab/services/workspace/internal/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const defaultJWTSecret = "securecollab-dev-secret-key"
+var (
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "workspace_http_requests_total", Help: "Total HTTP requests."},
+		[]string{"method", "path", "status"},
+	)
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: "workspace_http_request_duration_seconds", Help: "Request duration.", Buckets: prometheus.DefBuckets},
+		[]string{"method", "path", "status"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
+}
+
+func metricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		status := http.StatusText(c.Writer.Status())
+		httpRequestsTotal.WithLabelValues(c.Request.Method, c.FullPath(), status).Inc()
+		httpRequestDuration.WithLabelValues(c.Request.Method, c.FullPath(), status).Observe(time.Since(start).Seconds())
+	}
+}
+
+const defaultDevSecret = "securecollab-dev-secret-key"
 
 type claims struct {
 	UserID string `json:"user_id"`
@@ -53,10 +82,12 @@ func NewRouter(ws store.WorkspaceStore) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(corsMiddleware())
+	r.Use(metricsMiddleware())
 
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := r.Group("/v1")
 	v1.Use(authMiddleware(jwtSecretFromEnv()))
@@ -188,11 +219,23 @@ func addMember(s store.WorkspaceStore) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 			return
 		}
+
+		// Resolve username or UUID to a valid user UUID.
+		resolvedID, err := s.ResolveUserID(c.Request.Context(), req.UserID)
+		if err != nil {
+			if errors.Is(err, store.ErrUserNotFound) {
+				c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+				return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to resolve user"})
+			return
+		}
+
 		memberRole := req.Role
 		if memberRole == "" {
 			memberRole = "member"
 		}
-		if err := s.AddMember(c.Request.Context(), wsID, req.UserID, memberRole); err != nil {
+		if err := s.AddMember(c.Request.Context(), wsID, resolvedID, memberRole); err != nil {
 			if errors.Is(err, store.ErrAlreadyMember) {
 				c.JSON(http.StatusConflict, gin.H{"error": "already a member"})
 				return
@@ -331,10 +374,18 @@ func archiveChannel(s store.WorkspaceStore) gin.HandlerFunc {
 // --- Auth Middleware ---
 
 func corsMiddleware() gin.HandlerFunc {
+	allowedOrigin := corsOriginFromEnv()
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		if allowedOrigin == "*" {
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else if origin != "" && originAllowed(origin, allowedOrigin) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Credentials", "true")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
@@ -343,9 +394,27 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+func corsOriginFromEnv() string {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "prod") {
+		if origins := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")); origins != "" {
+			return origins
+		}
+	}
+	return "*"
+}
+
+func originAllowed(origin, allowed string) bool {
+	for _, o := range strings.Split(allowed, ",") {
+		if strings.TrimSpace(o) == origin {
+			return true
+		}
+	}
+	return false
+}
+
 func authMiddleware(secret string) gin.HandlerFunc {
 	if secret == "" {
-		secret = defaultJWTSecret
+		secret = defaultDevSecret
 	}
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -374,5 +443,6 @@ func jwtSecretFromEnv() string {
 	if v := strings.TrimSpace(os.Getenv("JWT_SECRET")); v != "" {
 		return v
 	}
-	return defaultJWTSecret
+	log.Println("WARNING: JWT_SECRET not set, using insecure default. Set JWT_SECRET env var for production.")
+	return defaultDevSecret
 }

@@ -3,11 +3,39 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"securecollab/services/analytics/internal/store"
 )
+
+var (
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "analytics_http_requests_total", Help: "Total HTTP requests."},
+		[]string{"method", "path", "status"},
+	)
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: "analytics_http_request_duration_seconds", Help: "Request duration.", Buckets: prometheus.DefBuckets},
+		[]string{"method", "path", "status"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
+}
+
+func metricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		status := http.StatusText(c.Writer.Status())
+		httpRequestsTotal.WithLabelValues(c.Request.Method, c.FullPath(), status).Inc()
+		httpRequestDuration.WithLabelValues(c.Request.Method, c.FullPath(), status).Observe(time.Since(start).Seconds())
+	}
+}
 
 type Handler struct {
 	store store.AnalyticsStore
@@ -18,7 +46,9 @@ func NewHandler(s store.AnalyticsStore) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
+	r.Use(metricsMiddleware())
 	r.GET("/healthz", h.health)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.GET("/v1/analytics/messages/volume", h.messageVolume)
 }
 

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/base64"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -12,9 +13,36 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const defaultJWTSecret = "securecollab-dev-secret-key"
+var (
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{Name: "keydist_http_requests_total", Help: "Total HTTP requests."},
+		[]string{"method", "path", "status"},
+	)
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{Name: "keydist_http_request_duration_seconds", Help: "Request duration.", Buckets: prometheus.DefBuckets},
+		[]string{"method", "path", "status"},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(httpRequestsTotal, httpRequestDuration)
+}
+
+func metricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		status := http.StatusText(c.Writer.Status())
+		httpRequestsTotal.WithLabelValues(c.Request.Method, c.FullPath(), status).Inc()
+		httpRequestDuration.WithLabelValues(c.Request.Method, c.FullPath(), status).Observe(time.Since(start).Seconds())
+	}
+}
+
+const defaultDevSecret = "securecollab-dev-secret-key"
 
 type UploadKeyRequest struct {
 	PublicKeyB64 string `json:"public_key_b64" binding:"required"`
@@ -42,10 +70,12 @@ func NewRouter(keyStore store.KeyStore) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(corsMiddleware())
+	r.Use(metricsMiddleware())
 
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	v1 := r.Group("/v1")
 	v1.Use(authMiddleware(jwtSecretFromEnv()))
@@ -127,10 +157,18 @@ func toKeyResponse(key store.PublicKey) KeyResponse {
 }
 
 func corsMiddleware() gin.HandlerFunc {
+	allowedOrigin := corsOriginFromEnv()
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		if allowedOrigin == "*" {
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else if origin != "" && originAllowed(origin, allowedOrigin) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Credentials", "true")
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
@@ -139,9 +177,27 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
+func corsOriginFromEnv() string {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "prod") {
+		if origins := strings.TrimSpace(os.Getenv("ALLOWED_ORIGINS")); origins != "" {
+			return origins
+		}
+	}
+	return "*"
+}
+
+func originAllowed(origin, allowed string) bool {
+	for _, o := range strings.Split(allowed, ",") {
+		if strings.TrimSpace(o) == origin {
+			return true
+		}
+	}
+	return false
+}
+
 func authMiddleware(secret string) gin.HandlerFunc {
 	if secret == "" {
-		secret = defaultJWTSecret
+		secret = defaultDevSecret
 	}
 
 	return func(c *gin.Context) {
@@ -178,5 +234,6 @@ func jwtSecretFromEnv() string {
 	if value := strings.TrimSpace(os.Getenv("JWT_SECRET")); value != "" {
 		return value
 	}
-	return defaultJWTSecret
+	log.Println("WARNING: JWT_SECRET not set, using insecure default. Set JWT_SECRET env var for production.")
+	return defaultDevSecret
 }

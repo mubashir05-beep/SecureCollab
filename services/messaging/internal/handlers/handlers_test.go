@@ -18,8 +18,8 @@ import (
 
 func TestSendEncryptedMessageAndInbox(t *testing.T) {
 	router := NewRouter(store.NewInMemoryMessageStore())
-	senderToken := testToken(t, defaultJWTSecret, "sender-1")
-	recipientToken := testToken(t, defaultJWTSecret, "recipient-1")
+	senderToken := testToken(t, defaultDevSecret, "sender-1")
+	recipientToken := testToken(t, defaultDevSecret, "recipient-1")
 
 	payload := SendMessageRequest{
 		RecipientUserID: "recipient-1",
@@ -79,8 +79,8 @@ func TestWebSocketInbox_DeliversPublishedMessage(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	recipientToken := testToken(t, defaultJWTSecret, "recipient-1")
-	senderToken := testToken(t, defaultJWTSecret, "sender-1")
+	recipientToken := testToken(t, defaultDevSecret, "recipient-1")
+	senderToken := testToken(t, defaultDevSecret, "sender-1")
 
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/v1/ws?access_token=" + recipientToken
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)

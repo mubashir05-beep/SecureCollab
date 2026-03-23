@@ -12,6 +12,10 @@ tasks:
     desc: Stop local base stack
     cmd: docker compose -f deploy/docker-compose.yml down
 
+  logs:
+    desc: Tail logs for all docker-compose services (last 100 lines)
+    cmd: docker compose -f deploy/docker-compose.yml logs -f --tail=100
+
   cdc:up:
     desc: Start local CDC overlay (Redpanda, Debezium Connect, ClickHouse)
     cmd: docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.cdc.yml up -d redpanda connect clickhouse
@@ -178,23 +182,36 @@ tasks:
     desc: Run k6 load test against gateway protected route
     cmd: k6 run tests/load/gateway.js
 
-  tauri:dev:
-    desc: Run Tauri desktop app in development mode
-    dir: client
-    cmd: cargo tauri dev
+  cdc:validate:
+    desc: Run CDC pipeline end-to-end validation (requires task dev + task cdc:up + task cdc:register)
+    cmd: bash tests/cdc/validate.sh
 
   tauri:build:
     desc: Build Tauri desktop app binaries
     dir: client
-    cmd: cargo tauri build
+    deps: [ui:install:tauri]
+    cmd: npx tauri build
 
   ui:install:
     desc: Install Svelte UI dependencies
     dir: client/ui
     cmd: npm install
 
+  ui:install:tauri:
+    desc: Install Tauri CLI dependencies
+    dir: client
+    cmd: npm install
+    status:
+      - test -d node_modules/@tauri-apps
+
   ui:dev:
-    desc: Run Svelte UI dev server
+    desc: Launch Tauri desktop app (starts Vite + opens native window)
+    dir: client
+    deps: [ui:install:tauri]
+    cmd: npx tauri dev
+
+  ui:web:
+    desc: Run Svelte UI in browser only (no Tauri, for quick frontend iteration)
     dir: client/ui
     cmd: npm run dev
 
@@ -202,3 +219,11 @@ tasks:
     desc: Run Svelte UI tests
     dir: client/ui
     cmd: npm run test -- --run
+
+  dev:all:
+    desc: Start full stack (backend services + Tauri desktop app)
+    cmds:
+      - task dev
+      - echo "Waiting for services to be healthy..."
+      - sleep 10
+      - task ui:dev

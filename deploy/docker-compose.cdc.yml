@@ -59,5 +59,13 @@ services:
       - clickhouse_data:/var/lib/clickhouse
       - ../pipeline/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
+  # Override analytics service to add ClickHouse DSN when CDC is active
+  analytics:
+    environment:
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
+      CLICKHOUSE_DSN: "clickhouse://clickhouse:9000/default"
+    depends_on:
+      - clickhouse
+
 volumes:
   clickhouse_data:

@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const defaultJWTSecret = "securecollab-dev-secret-key"
+const defaultDevSecret = "securecollab-dev-secret-key"
 
 type gatewayClaims struct {
 	UserID string `json:"user_id"`
@@ -19,7 +20,7 @@ type gatewayClaims struct {
 
 func authMiddleware(secret string) gin.HandlerFunc {
 	if secret == "" {
-		secret = defaultJWTSecret
+		secret = defaultDevSecret
 	}
 
 	return func(c *gin.Context) {
@@ -58,5 +59,9 @@ func authMiddleware(secret string) gin.HandlerFunc {
 }
 
 func jwtSecretFromEnv() string {
-	return os.Getenv("JWT_SECRET")
+	if value := os.Getenv("JWT_SECRET"); value != "" {
+		return value
+	}
+	log.Println("WARNING: JWT_SECRET not set, using insecure default. Set JWT_SECRET env var for production.")
+	return defaultDevSecret
 }

@@ -4,176 +4,146 @@
 	<img src="docs/assets/securecollab-logo.svg" alt="SecureCollab logo" width="140" />
 </p>
 
-<p align="center"><strong>SecureCollab</strong><br/>Zero-Knowledge Team Messaging Infrastructure</p>
+<p align="center"><strong>SecureCollab</strong><br/>Zero-Knowledge Team Messaging & Project Management</p>
 
-SecureCollab is a self-hosted, zero-knowledge team messaging platform built for organizations that cannot trust third-party chat infrastructure with sensitive internal communication.
+SecureCollab is a self-hosted, zero-knowledge collaboration platform — combining **Slack-like messaging** with **ClickUp-like project management**. Built for teams that need full control over their communication infrastructure.
 
-## The Problem
+## What It Does
 
-Most collaboration tools optimize for convenience over control. That creates hard problems for security-conscious teams:
+- **End-to-end encrypted messaging** — X25519 key exchange + ChaCha20-Poly1305. Server never sees plaintext.
+- **Workspaces & Channels** — Slack-style organization with public/private channels, invite codes, role-based access.
+- **Rich messaging** — Threads, emoji reactions, pins, @mentions, markdown, link previews, edit/delete.
+- **Real-time delivery** — WebSocket-based message push with encrypted payloads.
+- **CDC Analytics** — Debezium → Redpanda → ClickHouse pipeline for operational analytics (no plaintext exposure).
+- **Full observability** — Prometheus metrics, Grafana dashboards, Loki logs, alerting rules.
 
-- Message content is often visible to service providers.
-- Compliance and audit requirements are difficult in black-box SaaS systems.
-- On-premises deployment paths are limited or expensive.
-- Reproducible developer environments are hard to maintain across teams.
+## Architecture
 
-## What SecureCollab Solves
+```text
+┌─────────────┐     ┌──────────┐     ┌───────────┐     ┌───────────┐
+│  Svelte UI  │────▸│ Gateway  │────▸│   Auth    │────▸│ Postgres  │
+│  (Tauri)    │     │ (JWT+RL) │     │           │     │           │
+└─────────────┘     └──────────┘     └───────────┘     └───────────┘
+       │                                                      │
+       ├──▸ Messaging Service (E2E encrypted) ◂───────────────┤
+       ├──▸ Workspace Service (channels, members) ◂───────────┤
+       ├──▸ KeyDist Service (public key exchange) ◂───────────┤
+       └──▸ Analytics Service (ClickHouse + Postgres) ◂───────┘
+```
 
-SecureCollab is designed to provide:
+### Services
 
-- End-to-end encryption with zero-knowledge server constraints.
-- Self-hosted deployment for private networks and regulated environments.
-- A practical operations stack (metrics, logs, dashboards).
-- A reproducible local developer workflow (`devbox` + `task`).
-
-## Core Architecture
-
-- `services/gateway`: Entry point, auth middleware, rate limiting, metrics.
-- `services/auth`: Register/login/refresh API and JWT flow.
-- `services/keydist`: Public key upload/fetch API for client bootstrap.
-- `services/messaging`: Encrypted payload ingestion and recipient inbox retrieval.
-- `services/analytics`: Message volume analytics endpoints for operational reporting.
-- `db/migrations`: Versioned schema changes.
-- `deploy/docker-compose.yml`: Local infrastructure and services.
-- `docs/`: Architecture notes, ADRs, runbooks.
+| Service | Port | Description |
+|---------|------|-------------|
+| `gateway` | 8080 | API entry, JWT middleware, rate limiting, metrics |
+| `auth` | 8081 | Register, login, refresh, JWT issuance |
+| `messaging` | 8082 | E2E encrypted messages, threads, reactions, pins, WebSocket delivery |
+| `keydist` | 8083 | Public key upload/fetch for client key exchange |
+| `analytics` | 8084 | Message volume analytics (ClickHouse with Postgres fallback) |
+| `workspace` | 8086 | Workspaces, channels, members, invite codes, role enforcement |
 
 ## Tech Stack
 
-### Implemented Now
-
-#### Backend and APIs
-- Go 1.22
-- Gin
-- JWT (`golang-jwt/jwt`)
-
-#### Data and State
-- PostgreSQL 16
-- Redis 7
-
-#### Observability
-- Prometheus
-- Grafana
-- Loki + Promtail
-
-#### Client (Phase 2 Started)
-- Svelte 4 UI shell (`client/ui`)
-- Tailwind CSS design system tokens and reusable components
-- Vite build tooling
-- Vitest + Testing Library frontend smoke tests
-- Rust client core crate (`client/src-tauri`)
-- X25519 identity key generation (`x25519-dalek`)
-- Hash/key utilities (`sha2`, `base64`, `hex`)
-
-#### Developer Experience
-- Devbox (Nix-based, pinned toolchain)
-- Taskfile (`task`) workflows
-- Docker Compose local stack
-- k6 load testing (`tests/load/gateway.js`)
-- golang-migrate tasks (`migrate:up`, `migrate:down`, `migrate:create`)
-
-### Planned Next Technologies
-- Tauri integration between Svelte UI and Rust core
-- Kafka + Debezium + ClickHouse CDC pipeline
-- Vault / mTLS hardening for production deployment
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | Go 1.22, Gin, JWT, PostgreSQL 16, Redis 7 |
+| **Client** | Svelte 4, Tailwind CSS, Vite |
+| **Desktop** | Tauri (Rust), X25519 + ChaCha20-Poly1305 |
+| **CDC Pipeline** | Debezium, Redpanda (Kafka), ClickHouse |
+| **Observability** | Prometheus, Grafana, Loki + Promtail |
+| **DevEx** | Devbox (Nix), Taskfile, Docker Compose |
 
 ## Quick Start
 
 ```bash
-# 1) Enter pinned development shell
-cd SecureCollab
+# Enter dev shell (optional, for pinned toolchain)
 devbox shell
 
-# 2) Start local stack
+# Start everything (Postgres, Redis, all services, auto-migrations)
 task dev
 
-# 3) Run backend + client-core tests
-task test
-
-# 4) Run Svelte UI tests
-task ui:test
-
-# 5) Smoke check gateway
-task smoke:gateway
-```
-
-## Run UI Locally
-
-```bash
-# One-time install
-task ui:install
-
-# Start Svelte dev server
+# Start the UI dev server
 task ui:dev
+# Open http://localhost:5173
+
+# Run all tests
+task test
 ```
+
+Migrations run automatically on `task dev` — no manual setup needed.
 
 ## Useful Commands
 
 ```bash
-# Gateway only tests
-task test:gateway
-
-# Run database migrations (set DATABASE_URL first)
-export DATABASE_URL="postgres://securecollab:securecollab@localhost:5432/securecollab?sslmode=disable"
-task migrate:up
-
-# Gateway load test scaffolding
-task load-test
+task dev              # Start full Docker stack with auto-migrations
+task dev:down         # Stop stack
+task ui:dev           # Svelte dev server at localhost:5173
+task test             # Run all Go + Rust tests
+task load-test        # k6 gateway load test (1200 req/s target)
+task cdc:up           # Start CDC overlay (Redpanda, Debezium, ClickHouse)
+task cdc:register     # Register Debezium Postgres connector
+task cdc:validate     # E2E CDC pipeline validation
+task smoke:gateway    # Quick gateway health check
 ```
-
-## Current Project Status
-
-- Phase 1 core backend baseline is implemented with gateway + auth tested.
-- Redis-backed gateway rate limiting is implemented with in-memory fallback for local resilience.
-- Auth service now supports PostgreSQL-backed user persistence via `DATABASE_URL` with in-memory fallback for local/dev workflows.
-- Key Distribution Service now supports JWT-protected identity key upload/fetch with PostgreSQL-backed storage and integration tests.
-- Messaging Service now stores encrypted payload blobs only (ciphertext + nonce) with JWT-protected send/inbox APIs and integration tests.
-- Messaging Service now includes authenticated WebSocket inbox delivery for real-time recipient fan-out.
-- Integration coverage now includes two-identity encrypt/send/receive/decrypt validation and DB plaintext-absence checks for message payloads.
-- Analytics Service bootstrap is now implemented with Postgres-backed message-volume endpoint (`/v1/analytics/messages/volume`) and unit/integration tests.
-- Phase 3 CDC local infrastructure scaffold is added with Redpanda, Debezium Connect, and ClickHouse overlay compose + connector config.
-- Phase 2 has started in code with a tested Rust crypto foundation in `client/src-tauri` and a clean Svelte + Tailwind UI shell in `client/ui`.
 
 ## App Flow
 
-1. User signs in through client UI.
-2. Auth service issues JWT access token.
-3. Gateway validates JWT and enforces rate limits.
-4. Client initializes/loads local identity keys (Phase 2 crypto core).
-5. Client encrypts outbound payloads before sending (in-progress in Phase 2).
-6. Server stores ciphertext + metadata and routes events.
-7. Recipient client decrypts on-device.
+1. User registers/logs in → auth service issues JWT + user_id.
+2. Client auto-generates X25519 keypair, uploads public key to keydist.
+3. User creates or joins a workspace (via invite code).
+4. User creates channels, invites members.
+5. Messages are encrypted client-side before sending.
+6. Server stores ciphertext + nonce only — zero plaintext.
+7. Recipients decrypt on-device using shared key derivation.
+8. Real-time delivery via authenticated WebSocket.
 
 ## Roles Model
 
-Current role intent for workspace-level access:
+| Role | Permissions |
+|------|------------|
+| `owner` | Full control — workspace settings, members, channels, billing |
+| `admin` | Manage members and channels, moderate messages |
+| `member` | Read/write in allowed channels |
+| `viewer` | Read-only access for audit/observer scenarios |
 
-- `owner`: Workspace creator, full admin control.
-- `admin`: Manage members/channels and moderation actions.
-- `member`: Default collaborator role; read/write in allowed channels.
-- `viewer` (planned): Read-only access for audit/observer scenarios.
+## Project Status
 
-Current DB schema already supports role values via `workspace_members.role` and will be enforced by service authorization in upcoming steps.
+| Phase | Status | Summary |
+|-------|--------|---------|
+| 1 - API Gateway | Complete | Gateway, auth, rate limiting, load tests |
+| 2 - Crypto Core | Complete | Rust crypto, Tauri bridge, key bootstrap, browser fallback |
+| 3 - CDC Pipeline | Complete | Debezium → Redpanda → ClickHouse, dashboards, validation |
+| 4 - Workspaces | Complete | Workspace/channel CRUD, invites, members, onboarding UI |
+| 5 - Rich Messaging | Complete | Threads, reactions, pins, @mentions, markdown, link previews |
+| 6 - File Attachments | Not Started | Encrypted upload/download, MinIO, drag-drop |
+| 7 - Kanban (ClickUp) | Not Started | Boards, columns, tasks, drag-drop, labels |
+| 8 - Notifications | Not Started | Real-time notifications, typing indicators, presence |
+| 9 - Search/Admin | Not Started | Metadata search, admin panel, audit log |
+| 10 - Production | Not Started | Secrets, mTLS, Helm, Terraform, Tauri builds |
+
+Full checklist: `docs/PHASE_CHECKLIST.md` | Product scope: `docs/PRODUCT_SCOPE.md`
 
 ## Repository Layout
 
 ```text
-services/      Go microservices
-client/        Svelte UI + Rust core for Tauri integration
-db/            SQL migrations
-deploy/        Docker Compose and deployment assets
-docs/          Architecture, ADRs, runbooks
-tests/         Integration and load tests
+services/      Go microservices (gateway, auth, messaging, keydist, workspace, analytics)
+client/ui/     Svelte 4 + Tailwind CSS frontend
+client/src-tauri/  Rust crypto core (X25519, ChaCha20-Poly1305)
+db/migrations/ Versioned SQL schema (auto-applied on docker compose up)
+deploy/        Docker Compose, observability configs
+pipeline/      CDC configs (Debezium connectors, ClickHouse init)
+tests/         Load tests, CDC validation
+docs/          Architecture, ADRs, runbooks, phase checklist
 ```
 
 ## Documentation
 
-- Setup: `docs/SETUP.md`
-- Phase checklist: `docs/PHASE_CHECKLIST.md`
-- Phase 1 gate report: `docs/PHASE1_GATE_REPORT.md`
-- Architecture: `docs/architecture.md`
-- Local dev runbook: `docs/runbooks/local-dev.md`
-- CDC local runbook: `docs/runbooks/cdc-local.md`
-- ADR index: `docs/adr/README.md`
+- [Phase Checklist](docs/PHASE_CHECKLIST.md)
+- [Product Scope](docs/PRODUCT_SCOPE.md)
+- [Architecture](docs/architecture.md)
+- [Phase 1 Gate Report](docs/PHASE1_GATE_REPORT.md)
+- [Local Dev Runbook](docs/runbooks/local-dev.md)
+- [CDC Local Runbook](docs/runbooks/cdc-local.md)
 
 ## License
 

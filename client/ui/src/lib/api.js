@@ -1,6 +1,6 @@
 const AUTH_BASE = import.meta.env.VITE_AUTH_URL || "http://localhost:8081";
-const MESSAGING_BASE = import.meta.env.VITE_MESSAGING_URL || "http://localhost:8082";
-const KEYDIST_BASE = import.meta.env.VITE_KEYDIST_URL || "http://localhost:8083";
+const KEYDIST_BASE = import.meta.env.VITE_KEYDIST_URL || "http://localhost:8082";
+const MESSAGING_BASE = import.meta.env.VITE_MESSAGING_URL || "http://localhost:8083";
 const WORKSPACE_BASE = import.meta.env.VITE_WORKSPACE_URL || "http://localhost:8086";
 
 function authHeaders(token) {

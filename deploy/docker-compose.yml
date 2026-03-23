@@ -5,7 +5,9 @@ services:
     container_name: securecollab-gateway
     environment:
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
-      REDIS_ADDR: "${REDIS_ADDR:-redis:6379}"
+      REDIS_ADDR: "redis:6379"
+      APP_ENV: "${APP_ENV:-dev}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     depends_on:
@@ -17,8 +19,10 @@ services:
       context: ../services/auth
     container_name: securecollab-auth
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+      APP_ENV: "${APP_ENV:-dev}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
     ports:
       - "${AUTH_PORT:-8081}:8081"
     depends_on:
@@ -31,10 +35,12 @@ services:
       context: ../services/keydist
     container_name: securecollab-keydist
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+      APP_ENV: "${APP_ENV:-dev}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
     ports:
-      - "${KEYDIST_PORT:-8083}:8082"
+      - "${KEYDIST_PORT:-8082}:8082"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -45,10 +51,12 @@ services:
       context: ../services/messaging
     container_name: securecollab-messaging
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+      APP_ENV: "${APP_ENV:-dev}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
     ports:
-      - "${MESSAGING_PORT:-8082}:8083"
+      - "${MESSAGING_PORT:-8083}:8083"
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -59,7 +67,7 @@ services:
       context: ../services/analytics
     container_name: securecollab-analytics
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
     ports:
       - "${ANALYTICS_PORT:-8084}:8084"
     depends_on:
@@ -72,8 +80,10 @@ services:
       context: ../services/workspace
     container_name: securecollab-workspace
     environment:
-      DATABASE_URL: "${DATABASE_URL:-postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable}"
+      DATABASE_URL: "postgres://securecollab:securecollab@postgres:5432/securecollab?sslmode=disable"
       JWT_SECRET: "${JWT_SECRET:-securecollab-dev-secret-key}"
+      APP_ENV: "${APP_ENV:-dev}"
+      ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
     ports:
       - "${WORKSPACE_PORT:-8086}:8086"
     depends_on:
@@ -141,6 +151,7 @@ services:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
     depends_on:
       - gateway
 
@@ -152,6 +163,10 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
       - loki
@@ -169,7 +184,8 @@ services:
     command: -config.file=/etc/promtail/config.yml
     volumes:
       - ./observability/promtail.yml:/etc/promtail/config.yml:ro
-      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
 volumes:
   postgres_data:

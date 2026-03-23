@@ -45,80 +45,110 @@
 </script>
 
 {#if visible}
+  <!-- Backdrop -->
   <div
-    class="fixed inset-0 z-50 grid place-content-center bg-slate-900/60 p-4 backdrop-blur-sm"
+    class="fixed inset-0 z-50 grid place-content-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in"
     on:click={(e) => e.currentTarget === e.target && close()}
     on:keydown={(e) => e.key === "Escape" && close()}
     role="button"
     tabindex="0"
     aria-label="Close dialog"
   >
+    <!-- Dialog -->
     <div
-      class="w-[min(400px,90vw)] rounded-2xl bg-white p-6 shadow-2xl"
+      class="w-[min(400px,90vw)] rounded-2xl border border-shell-border bg-shell-elevated p-6 shadow-modal animate-slide-up"
       role="dialog"
       tabindex="-1"
       aria-modal="true"
+      aria-labelledby="auth-modal-title"
     >
-      <!-- Logo -->
-      <div class="mb-4 flex items-center gap-3">
-        <div class="grid h-10 w-10 place-content-center rounded-xl bg-gradient-to-br from-shell-accent to-shell-success text-white font-bold text-sm">SC</div>
+      <!-- Logo + title -->
+      <div class="mb-5 flex items-center gap-3">
+        <div class="grid h-10 w-10 flex-shrink-0 place-content-center rounded-xl bg-shell-accent text-sm font-bold text-white" aria-hidden="true">
+          SC
+        </div>
         <div>
-          <h3 class="text-lg font-bold text-slate-900">{mode === "register" ? "Create Account" : "Welcome Back"}</h3>
-          <p class="text-sm text-slate-500">Continue to SecureCollab</p>
+          <h3 id="auth-modal-title" class="text-lg font-bold text-shell-ink">
+            {mode === "register" ? "Create Account" : "Welcome Back"}
+          </h3>
+          <p class="text-sm text-shell-muted">Continue to SecureCollab</p>
         </div>
       </div>
 
+      <!-- Error banner -->
       {#if error}
-        <div class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div class="mb-4 flex items-start gap-2 rounded-lg bg-shell-dangerBg px-3 py-2.5 text-sm text-shell-danger" role="alert">
+          <svg class="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+          {error}
+        </div>
       {/if}
 
-      <form on:submit|preventDefault={handleSubmit} class="space-y-3">
+      <form on:submit|preventDefault={handleSubmit} class="space-y-4">
+        <!-- Username -->
         <div>
-          <label for="auth-username" class="mb-1 block text-xs font-medium text-slate-600">Username</label>
+          <label for="auth-username" class="mb-1.5 block text-xs font-medium text-shell-muted">Username</label>
           <input
             id="auth-username"
             type="text"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30 outline-none"
             bind:value={username}
             required
+            autocomplete="username"
+            class="w-full rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
+            placeholder="your-username"
           />
         </div>
 
+        <!-- Email (register only) -->
         {#if mode === "register"}
           <div>
-            <label for="auth-email" class="mb-1 block text-xs font-medium text-slate-600">Email</label>
+            <label for="auth-email" class="mb-1.5 block text-xs font-medium text-shell-muted">Email</label>
             <input
               id="auth-email"
               type="email"
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30 outline-none"
               bind:value={email}
               required
+              autocomplete="email"
+              class="w-full rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
+              placeholder="you@example.com"
             />
           </div>
         {/if}
 
+        <!-- Password -->
         <div>
-          <label for="auth-password" class="mb-1 block text-xs font-medium text-slate-600">Password</label>
+          <label for="auth-password" class="mb-1.5 block text-xs font-medium text-shell-muted">Password</label>
           <input
             id="auth-password"
             type="password"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30 outline-none"
             bind:value={password}
             required
+            autocomplete={mode === "register" ? "new-password" : "current-password"}
+            class="w-full rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
+            placeholder="••••••••"
           />
         </div>
 
-        <Button type="submit">
-          {#if loading}Signing in...{:else}{mode === "register" ? "Create Account" : "Sign In"}{/if}
+        <Button type="submit" fullWidth={true} {loading}>
+          {loading ? "Signing in…" : mode === "register" ? "Create Account" : "Sign In"}
         </Button>
 
-        <p class="text-center text-sm text-slate-500">
+        <p class="text-center text-sm text-shell-subtle">
           {#if mode === "login"}
-            Don't have an account?
-            <button type="button" class="text-shell-accent hover:underline" on:click={() => { mode = "register"; error = ""; }}>Sign up</button>
+            No account?
+            <button
+              type="button"
+              class="font-medium text-shell-accentText hover:underline"
+              on:click={() => { mode = "register"; error = ""; }}
+            >Sign up</button>
           {:else}
-            Already have an account?
-            <button type="button" class="text-shell-accent hover:underline" on:click={() => { mode = "login"; error = ""; }}>Sign in</button>
+            Have an account?
+            <button
+              type="button"
+              class="font-medium text-shell-accentText hover:underline"
+              on:click={() => { mode = "login"; error = ""; }}
+            >Sign in</button>
           {/if}
         </p>
       </form>

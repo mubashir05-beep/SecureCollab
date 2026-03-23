@@ -71,8 +71,8 @@ func TestE2EEncryptSendReceiveDecrypt_WithTwoIdentities(t *testing.T) {
 	nonce, ciphertext := encryptAESGCM(t, senderShared, plaintext)
 
 	router := NewRouter(s)
-	senderToken := integrationToken(t, defaultJWTSecret, senderID)
-	recipientToken := integrationToken(t, defaultJWTSecret, recipientID)
+	senderToken := integrationToken(t, defaultDevSecret, senderID)
+	recipientToken := integrationToken(t, defaultDevSecret, recipientID)
 
 	body, _ := json.Marshal(SendMessageRequest{
 		RecipientUserID: recipientID,

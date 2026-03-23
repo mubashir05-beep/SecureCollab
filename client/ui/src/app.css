@@ -2,17 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color: #13252b;
-  background: #f2f7f6;
-  font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+/* ── Base reset & typography ── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: #1a1d21;
+    color: #e3e5e8;
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  /* Custom scrollbar — minimal, Slack-inspired */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Focus ring — keyboard nav */
+  :focus-visible {
+    outline: 2px solid #5865f2;
+    outline-offset: 2px;
+  }
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at 12% 20%, #d9fbef 0%, transparent 35%),
-    radial-gradient(circle at 90% 80%, #c9f4fb 0%, transparent 32%),
-    #f2f7f6;
+/* ── Markdown text rendering (dark-mode) ── */
+@layer components {
+  .md-codeblock {
+    background: #111214;
+    border: 1px solid #3f4147;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1rem;
+    margin: 0.375rem 0;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    white-space: pre;
+    display: block;
+    color: #e3e5e8;
+  }
+
+  .md-inline-code {
+    background: #111214;
+    border: 1px solid #3f4147;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.8125rem;
+    font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    color: #e06c75;
+  }
+
+  .md-link {
+    color: #c9ccff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .md-link:hover {
+    color: #ffffff;
+  }
+
+  .md-mention {
+    background: #444271;
+    color: #c9ccff;
+    border-radius: 0.25rem;
+    padding: 0.05rem 0.3rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .md-mention:hover {
+    background: #5865f2;
+    color: #ffffff;
+  }
+
+  .md-blockquote {
+    border-left: 3px solid #5865f2;
+    padding-left: 0.75rem;
+    color: #949ba4;
+    margin: 0.25rem 0;
+    display: block;
+  }
 }

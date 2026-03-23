@@ -12,6 +12,7 @@ dist/
 out/
 node_modules/
 .devbox/
+client/node_modules/
 client/ui/node_modules/
 client/ui/.vite/
 

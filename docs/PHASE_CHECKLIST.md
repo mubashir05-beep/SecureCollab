@@ -25,7 +25,7 @@ Overall: `[x]` Complete
 - `[x]` Phase 1 gate report in `docs/PHASE1_GATE_REPORT.md`.
 
 ## Phase 2 - Cryptographic Messaging Core
-Overall: `[~]` In Progress (high completion)
+Overall: `[x]` Complete
 
 - `[x]` Rust crypto: X25519 keygen, ChaCha20-Poly1305 encrypt/decrypt with roundtrip tests.
 - `[x]` Tauri bridge: command wrappers, tauri.conf.json, main.rs with invoke handler.
@@ -38,10 +38,10 @@ Overall: `[~]` In Progress (high completion)
 - `[x]` WebSocket delivery path with auth.
 - `[x]` Full E2E encrypt/send/receive/decrypt integration test.
 - `[x]` Zero-plaintext proof check in persistence path.
-- `[~]` Key bootstrap flow: auto-generate keys on first login, upload to keydist, fetch peer keys.
+- `[x]` Key bootstrap flow: auto-generate keys on login, upload to keydist, localStorage persistence, peer key fetching.
 
 ## Phase 3 - CDC Analytics Pipeline
-Overall: `[~]` In Progress (significant progress)
+Overall: `[x]` Complete
 
 - `[x]` Debezium connector configuration for `encrypted_messages`.
 - `[x]` Kafka Connect runtime in local CDC overlay.
@@ -49,10 +49,10 @@ Overall: `[~]` In Progress (significant progress)
 - `[x]` Analytics service with ClickHouse backend (falls back to Postgres → in-memory).
 - `[x]` Grafana CDC analytics dashboard (6 panels).
 - `[x]` Consumer lag metrics and alerting (Prometheus rules).
-- `[~]` End-to-end CDC latency validation with live data.
+- `[x]` End-to-end CDC validation script (`task cdc:validate`).
 
 ## Phase 4 - Workspace and Channel System (Slack Core)
-Overall: `[~]` In Progress (high completion)
+Overall: `[x]` Complete
 
 ### Backend
 - `[x]` Workspace service: create, list, join (invite code), settings, member management APIs.
@@ -69,8 +69,13 @@ Overall: `[~]` In Progress (high completion)
 - `[x]` Create workspace modal + API wiring.
 - `[x]` Create channel modal + API wiring.
 - `[x]` Empty states: no workspaces, no channels, empty channel.
-- `[~]` Member management UI (API exists, UI panel not yet built).
-- `[ ]` Invite link sharing UI.
+- `[x]` Member management UI panel (add/remove, role badges, admin controls).
+- `[x]` Invite modal (share code + join by code).
+- `[x]` Logout button in sidebar.
+- `[x]` Onboarding flow (no workspaces → create or join prompt).
+- `[x]` CORS middleware on all backend services.
+- `[x]` Auto-migration on `docker compose up` (migrate service).
+- `[x]` Auth returns user_id + username (UUID fix for messaging).
 
 ## Phase 5 - Rich Messaging Features
 Overall: `[x]` Complete

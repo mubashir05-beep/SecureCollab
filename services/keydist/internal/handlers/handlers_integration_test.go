@@ -56,7 +56,7 @@ func TestKeyBootstrapFlow_ClientToService_WithPostgres(t *testing.T) {
 	}
 
 	router := NewRouter(s)
-	token := integrationToken(t, defaultJWTSecret, userID)
+	token := integrationToken(t, defaultDevSecret, userID)
 
 	publicKey := base64.StdEncoding.EncodeToString([]byte("bootstrap-public-key"))
 	uploadBody, _ := json.Marshal(UploadKeyRequest{PublicKeyB64: publicKey})

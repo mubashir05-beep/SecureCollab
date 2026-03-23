@@ -16,7 +16,7 @@ import (
 
 func TestUploadAndFetchIdentityKey_WithValidToken(t *testing.T) {
 	router := NewRouter(store.NewInMemoryKeyStore())
-	token := testToken(t, defaultJWTSecret, "user-123")
+	token := testToken(t, defaultDevSecret, "user-123")
 
 	payload := UploadKeyRequest{PublicKeyB64: base64.StdEncoding.EncodeToString([]byte("public-key-1"))}
 	body, _ := json.Marshal(payload)
@@ -68,7 +68,7 @@ func TestUploadIdentityKey_WithoutToken_ReturnsUnauthorized(t *testing.T) {
 
 func TestFetchIdentityKey_NotFound_Returns404(t *testing.T) {
 	router := NewRouter(store.NewInMemoryKeyStore())
-	token := testToken(t, defaultJWTSecret, "user-123")
+	token := testToken(t, defaultDevSecret, "user-123")
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/keys/identity/missing-user", nil)
 	req.Header.Set("Authorization", "Bearer "+token)

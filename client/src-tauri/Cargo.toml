@@ -7,9 +7,6 @@ edition = "2021"
 name = "securecollab_client_core"
 path = "src/lib.rs"
 
-[[bin]]
-name = "securecollab"
-path = "src/main.rs"
 
 [dependencies]
 base64 = "0.22"

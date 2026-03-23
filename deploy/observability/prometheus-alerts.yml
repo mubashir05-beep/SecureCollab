@@ -27,3 +27,41 @@ groups:
         annotations:
           summary: "Debezium connector is not reporting status"
           description: "The Debezium Postgres connector for encrypted_messages has not reported status for 3 minutes."
+
+  - name: securecollab_services
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(gateway_http_requests_total{status=~"5.."}[5m])) / sum(rate(gateway_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Gateway 5xx error rate above 5%"
+          description: "Gateway is returning {{ $value | humanizePercentage }} server errors."
+
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(gateway_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Gateway p95 latency above 2s"
+          description: "95th percentile request latency is {{ $value }}s."
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Prometheus cannot reach {{ $labels.job }} for more than 1 minute."
+
+      - alert: HighRateLimiting
+        expr: rate(gateway_rate_limited_requests_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of rate-limited requests"
+          description: "More than 10 requests/sec are being rate-limited."

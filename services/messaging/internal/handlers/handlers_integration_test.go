@@ -58,8 +58,8 @@ func TestMessagingFlow_StoresCiphertextOnly_WithPostgres(t *testing.T) {
 	}
 
 	router := NewRouter(s)
-	senderToken := integrationToken(t, defaultJWTSecret, senderID)
-	recipientToken := integrationToken(t, defaultJWTSecret, recipientID)
+	senderToken := integrationToken(t, defaultDevSecret, senderID)
+	recipientToken := integrationToken(t, defaultDevSecret, recipientID)
 
 	plaintext := "hello-plaintext-never-store"
 	ciphertextB64 := base64.StdEncoding.EncodeToString([]byte("ciphertext-blob-123"))

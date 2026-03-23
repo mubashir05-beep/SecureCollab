@@ -36,9 +36,12 @@ type Workspace struct {
 
 type WorkspaceMember struct {
 	UserID   string    `json:"user_id"`
+	Username string    `json:"username"`
 	Role     string    `json:"role"`
 	JoinedAt time.Time `json:"joined_at"`
 }
+
+var ErrUserNotFound = errors.New("user not found")
 
 type Channel struct {
 	ID          string     `json:"id"`
@@ -61,6 +64,7 @@ type WorkspaceStore interface {
 	RemoveMember(ctx context.Context, workspaceID, userID string) error
 	ListMembers(ctx context.Context, workspaceID string) ([]WorkspaceMember, error)
 	GetMemberRole(ctx context.Context, workspaceID, userID string) (string, error)
+	ResolveUserID(ctx context.Context, usernameOrID string) (string, error)
 
 	CreateChannel(ctx context.Context, workspaceID, name, description, topic, createdBy string, isPrivate bool) (Channel, error)
 	GetChannel(ctx context.Context, id string) (Channel, error)
@@ -201,6 +205,10 @@ func (s *inMemoryStore) GetMemberRole(_ context.Context, workspaceID, userID str
 		}
 	}
 	return "", ErrNotMember
+}
+
+func (s *inMemoryStore) ResolveUserID(_ context.Context, usernameOrID string) (string, error) {
+	return usernameOrID, nil
 }
 
 func (s *inMemoryStore) CreateChannel(_ context.Context, workspaceID, name, description, topic, createdBy string, isPrivate bool) (Channel, error) {
@@ -393,7 +401,10 @@ func (s *PostgresStore) RemoveMember(ctx context.Context, workspaceID, userID st
 
 func (s *PostgresStore) ListMembers(ctx context.Context, workspaceID string) ([]WorkspaceMember, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT user_id, role, joined_at FROM workspace_members WHERE workspace_id = $1 ORDER BY joined_at`, workspaceID)
+		`SELECT wm.user_id, COALESCE(u.username, ''), wm.role, wm.joined_at
+		 FROM workspace_members wm
+		 LEFT JOIN users u ON u.id = wm.user_id
+		 WHERE wm.workspace_id = $1 ORDER BY wm.joined_at`, workspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -401,7 +412,7 @@ func (s *PostgresStore) ListMembers(ctx context.Context, workspaceID string) ([]
 	var result []WorkspaceMember
 	for rows.Next() {
 		var m WorkspaceMember
-		if err := rows.Scan(&m.UserID, &m.Role, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.Username, &m.Role, &m.JoinedAt); err != nil {
 			return nil, err
 		}
 		result = append(result, m)
@@ -420,6 +431,47 @@ func (s *PostgresStore) GetMemberRole(ctx context.Context, workspaceID, userID s
 		return "", err
 	}
 	return role, nil
+}
+
+func (s *PostgresStore) ResolveUserID(ctx context.Context, usernameOrID string) (string, error) {
+	// If it looks like a UUID, verify it exists and return it.
+	if isUUID(usernameOrID) {
+		var id string
+		err := s.db.QueryRowContext(ctx, `SELECT id::text FROM users WHERE id = $1`, usernameOrID).Scan(&id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return "", ErrUserNotFound
+			}
+			return "", err
+		}
+		return id, nil
+	}
+	// Otherwise treat as username.
+	var id string
+	err := s.db.QueryRowContext(ctx, `SELECT id::text FROM users WHERE username = $1`, usernameOrID).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", ErrUserNotFound
+		}
+		return "", err
+	}
+	return id, nil
+}
+
+func isUUID(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i, c := range s {
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+		} else if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *PostgresStore) CreateChannel(ctx context.Context, workspaceID, name, description, topic, createdBy string, isPrivate bool) (Channel, error) {

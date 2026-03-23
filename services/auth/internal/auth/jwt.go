@@ -2,13 +2,16 @@ package auth
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const SecretKey = "securecollab-dev-secret-key"
+// defaultDevSecret is only used when JWT_SECRET env var is not set.
+// A warning is logged when this fallback is used.
+const defaultDevSecret = "securecollab-dev-secret-key"
 
 type JWTClaims struct {
 	UserID string `json:"user_id"`
@@ -41,6 +44,9 @@ func ValidateToken(tokenString string) (*JWTClaims, error) {
 
 	claims := &JWTClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
+		}
 		return []byte(secret), nil
 	})
 
@@ -55,5 +61,6 @@ func jwtSecretFromEnv() string {
 	if value := os.Getenv("JWT_SECRET"); value != "" {
 		return value
 	}
-	return SecretKey
+	log.Println("WARNING: JWT_SECRET not set, using insecure default. Set JWT_SECRET env var for production.")
+	return defaultDevSecret
 }
