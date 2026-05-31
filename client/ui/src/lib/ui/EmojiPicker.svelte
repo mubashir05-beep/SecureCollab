@@ -28,18 +28,18 @@
 
 {#if visible}
   <div
-    class="absolute bottom-full right-0 z-50 mb-1.5 rounded-xl border border-shell-border bg-shell-elevated p-2 shadow-modal animate-slide-up"
+    class="absolute bottom-full right-0 z-50 mb-3 rounded-2xl border border-borderSoft bg-white p-2 shadow-2xl animate-slide-up overflow-hidden"
     role="tooltip"
-    aria-label="Emoji picker"
   >
-    <div class="grid grid-cols-6 gap-0.5">
+    <div class="grid grid-cols-6 gap-1">
       {#each commonEmojis as { emoji, label }}
         <button
           on:click={() => pick(label)}
-          class="grid h-8 w-8 place-content-center rounded-lg text-base transition-colors hover:bg-shell-surface"
+          class="w-9 h-9 flex items-center justify-center rounded-xl text-lg transition-all hover:bg-sidebar hover:scale-110 active:scale-90"
           title={label}
-          aria-label="React with {label}"
-        >{emoji}</button>
+        >
+          {emoji}
+        </button>
       {/each}
     </div>
   </div>

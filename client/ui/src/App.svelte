@@ -1,5 +1,7 @@
 <script>
+  import { onDestroy } from "svelte";
   import Sidebar from "./lib/ui/Sidebar.svelte";
+  import TaskPanel from "./lib/ui/TaskPanel.svelte";
   import TopBar from "./lib/ui/TopBar.svelte";
   import MessageBubble from "./lib/ui/MessageBubble.svelte";
   import MessageInput from "./lib/ui/MessageInput.svelte";
@@ -20,6 +22,7 @@
   let showCreateCh = false;
   let showInvite = false;
   let showMembers = false;
+  let showTasks = true; // Default to true on desktop
   let onboardingInviteCode = "";
   let onboardingError = "";
   let authModal, wsModal, chModal, inviteModal, membersPanel;
@@ -32,7 +35,15 @@
   let activeChannel = null;
   let messages = [];
   let wsConn = null;
+  let wsReconnectTimer = null;
+  let wsGeneration = 0;
+  let connectionState = "disconnected";
+  let lastLiveEventAt = null;
   let workspacesLoaded = false;
+  let messageViewport;
+
+  let unreadByWorkspace = {};
+  let unreadByChannel = {};
 
   // Rich messaging state
   let threadParent = null;
@@ -68,14 +79,24 @@
   }
 
   function cleanup() {
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    wsGeneration += 1;
     if (wsConn) { wsConn.close(); wsConn = null; }
     workspaces = [];
     channels = [];
     messages = [];
     activeWorkspace = null;
     activeChannel = null;
+    connectionState = "disconnected";
     workspacesLoaded = false;
   }
+
+  onDestroy(() => {
+    cleanup();
+  });
 
   async function handleAuth(e) {
     const { mode, username, email, password } = e.detail;
@@ -97,8 +118,13 @@
   async function loadWorkspaces() {
     try {
       const res = await api.listWorkspaces($auth.token);
-      workspaces = (res.workspaces || []).map(ws => ({ ...ws, unreadCount: 0 }));
-      if (workspaces.length > 0 && !activeWorkspace) {
+      workspaces = (res.workspaces || []).map((ws) => ({
+        ...ws,
+        unreadCount: unreadByWorkspace[ws.id] || 0,
+      }));
+      if (activeWorkspace) {
+        activeWorkspace = workspaces.find((ws) => ws.id === activeWorkspace.id) || workspaces[0] || null;
+      } else if (workspaces.length > 0) {
         activeWorkspace = workspaces[0];
       }
     } catch { /* silent */ }
@@ -122,8 +148,13 @@
   async function loadChannels(workspaceId) {
     try {
       const res = await api.listChannels($auth.token, workspaceId);
-      channels = (res.channels || []).map(ch => ({ ...ch, unreadCount: 0 }));
-      if (channels.length > 0 && (!activeChannel || activeChannel.workspace_id !== workspaceId)) {
+      channels = (res.channels || []).map((ch) => ({
+        ...ch,
+        unreadCount: unreadByChannel[ch.id] || 0,
+      }));
+      if (activeChannel) {
+        activeChannel = channels.find((ch) => ch.id === activeChannel.id) || channels[0] || null;
+      } else if (channels.length > 0) {
         activeChannel = channels[0];
       }
     } catch { /* silent */ }
@@ -156,15 +187,94 @@
     try {
       const res = await api.getInbox($auth.token);
       messages = res.messages || [];
+      scrollMessagesToBottom();
     } catch { /* silent */ }
   }
 
-  function connectWs() {
-    if (wsConn) { wsConn.close(); wsConn = null; }
-    wsConn = api.connectInboxWs($auth.token, (envelope) => {
-      messages = [...messages, envelope];
+  function scrollMessagesToBottom() {
+    requestAnimationFrame(() => {
+      if (messageViewport) {
+        messageViewport.scrollTop = messageViewport.scrollHeight;
+      }
     });
-    wsConn.onclose = () => { wsConn = null; };
+  }
+
+  function updateUnreadCounts(channelId, nextCount) {
+    if (!channelId) return;
+    unreadByChannel = { ...unreadByChannel, [channelId]: nextCount };
+    channels = channels.map((channel) => (
+      channel.id === channelId ? { ...channel, unreadCount: nextCount } : channel
+    ));
+    if (activeWorkspace) {
+      const workspaceUnread = channels.reduce((total, channel) => total + (unreadByChannel[channel.id] || 0), 0);
+      unreadByWorkspace = { ...unreadByWorkspace, [activeWorkspace.id]: workspaceUnread };
+      workspaces = workspaces.map((workspace) => (
+        workspace.id === activeWorkspace.id ? { ...workspace, unreadCount: workspaceUnread } : workspace
+      ));
+    }
+  }
+
+  function clearUnreadForChannel(channelId) {
+    if (!channelId) return;
+    updateUnreadCounts(channelId, 0);
+  }
+
+  function markLiveActivity() {
+    lastLiveEventAt = new Date().toISOString();
+  }
+
+  function handleIncomingMessage(envelope) {
+    if (!envelope || (envelope.id && messages.some((msg) => msg.id === envelope.id))) {
+      return;
+    }
+
+    messages = [...messages, envelope];
+    markLiveActivity();
+
+    if (envelope.channel_id) {
+      const nextUnread = activeChannel?.id === envelope.channel_id ? 0 : (unreadByChannel[envelope.channel_id] || 0) + 1;
+      updateUnreadCounts(envelope.channel_id, nextUnread);
+      if (activeChannel?.id === envelope.channel_id) {
+        clearUnreadForChannel(envelope.channel_id);
+      }
+    }
+
+    scrollMessagesToBottom();
+  }
+
+  function connectWs() {
+    const generation = ++wsGeneration;
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    if (wsConn) { wsConn.close(); wsConn = null; }
+
+    connectionState = "connecting";
+    wsConn = api.connectInboxWs($auth.token, handleIncomingMessage);
+    wsConn.onopen = () => {
+      if (generation !== wsGeneration) return;
+      connectionState = "connected";
+      markLiveActivity();
+    };
+    wsConn.onerror = () => {
+      if (generation !== wsGeneration) return;
+      connectionState = "reconnecting";
+    };
+    wsConn.onclose = () => {
+      if (generation !== wsGeneration) return;
+      wsConn = null;
+      if (!$isAuthenticated) {
+        connectionState = "disconnected";
+        return;
+      }
+      connectionState = "reconnecting";
+      wsReconnectTimer = setTimeout(() => {
+        if (generation === wsGeneration && $isAuthenticated && activeChannel) {
+          connectWs();
+        }
+      }, 2500);
+    };
   }
 
   async function handleSend(e) {
@@ -172,7 +282,8 @@
     try {
       const keys = $keyStore;
       const payload = await encryptMessage(keys.privateKey, keys.publicKey, text);
-      await api.sendMessage($auth.token, $auth.userId, payload.ciphertext_b64, payload.nonce_b64, activeChannel?.id || "");
+      const envelope = await api.sendMessage($auth.token, $auth.userId, payload.ciphertext_b64, payload.nonce_b64, activeChannel?.id || "");
+      handleIncomingMessage(envelope);
     } catch (err) {
       console.error("Send failed:", err);
     }
@@ -187,7 +298,7 @@
     const keys = $keyStore;
     decryptMessage(keys.privateKey, keys.publicKey, msg.ciphertext_b64, msg.nonce_b64).then((text) => {
       decryptCache[cacheKey] = text;
-      messages = messages; // trigger reactivity
+      messages = [...messages];
     });
     return decryptCache[cacheKey];
   }
@@ -200,6 +311,7 @@
       const res = await api.getReactions($auth.token, messageId);
       messageReactions[messageId] = res.reactions || [];
       messageReactions = messageReactions;
+      markLiveActivity();
     } catch { /* silent */ }
   }
 
@@ -224,6 +336,7 @@
       await api.postThreadReply($auth.token, threadParent.id, $auth.username, payload.ciphertext_b64, payload.nonce_b64);
       const res = await api.getThreadReplies($auth.token, threadParent.id);
       threadReplies = res.replies || [];
+      markLiveActivity();
     } catch (err) {
       console.error("Thread reply failed:", err);
     }
@@ -240,6 +353,7 @@
     const { messageId } = e.detail;
     try {
       await api.pinMessage($auth.token, messageId, activeChannel?.id || "");
+      markLiveActivity();
     } catch { /* silent */ }
   }
 
@@ -249,6 +363,7 @@
     try {
       await api.deleteMessageApi($auth.token, messageId);
       messages = messages.filter(m => m.id !== messageId);
+      markLiveActivity();
     } catch { /* silent */ }
   }
 
@@ -319,6 +434,16 @@
 
   function handleSelectChannel(e) {
     activeChannel = e.detail;
+    clearUnreadForChannel(activeChannel?.id);
+  }
+
+  function formatLiveActivity(ts) {
+    if (!ts) return "Connecting";
+    const delta = Date.now() - new Date(ts).getTime();
+    if (Number.isNaN(delta) || delta < 1000) return "Live now";
+    if (delta < 60_000) return `${Math.max(1, Math.floor(delta / 1000))}s ago`;
+    if (delta < 3_600_000) return `${Math.floor(delta / 60_000)}m ago`;
+    return `${Math.floor(delta / 3_600_000)}h ago`;
   }
 </script>
 
@@ -326,48 +451,50 @@
      LANDING — not authenticated
 ═══════════════════════════════════════════════ -->
 {#if !$isAuthenticated}
-  <main class="flex min-h-screen flex-col items-center justify-center bg-shell-sidebar px-4">
-    <div class="w-full max-w-sm text-center animate-slide-up">
+  <main class="flex min-h-screen flex-col items-center justify-center bg-sidebar px-4 relative overflow-hidden">
+    <!-- Decorative background elements -->
+    <div class="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-sage/5 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-clay/5 rounded-full blur-3xl"></div>
 
+    <div class="w-full max-w-[480px] text-center animate-slide-up relative z-10">
       <!-- Logo mark -->
-      <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-shell-accent shadow-panel" aria-hidden="true">
-        <span class="text-2xl font-bold text-white">SC</span>
+      <div class="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-[32px] bg-sage shadow-2xl shadow-sage/30" aria-hidden="true">
+        <span class="text-3xl font-bold text-white">SC</span>
       </div>
 
-      <h1 class="mb-2 text-3xl font-bold text-shell-ink">SecureCollab</h1>
-      <p class="mb-2 text-base text-shell-muted">Zero-knowledge team messaging</p>
+      <h1 class="mb-4 text-4xl font-bold text-charcoal tracking-tight">SecureCollab</h1>
+      <p class="mb-8 text-lg text-muted font-medium max-w-sm mx-auto leading-relaxed">
+        A premium-but-friendly workspace merging chat with project management.
+      </p>
 
-      <!-- Feature pills -->
-      <div class="mb-8 flex flex-wrap justify-center gap-2">
-        <span class="flex items-center gap-1.5 rounded-full border border-shell-border bg-shell-elevated px-3 py-1 text-xs text-shell-muted">
-          <svg class="h-3 w-3 text-shell-success" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-          </svg>
-          E2E Encrypted
-        </span>
-        <span class="flex items-center gap-1.5 rounded-full border border-shell-border bg-shell-elevated px-3 py-1 text-xs text-shell-muted">
-          <svg class="h-3 w-3 text-shell-accentText" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 12.094A5.973 5.973 0 004 15v1H1v-1a3 3 0 013.75-2.906z" />
-          </svg>
-          Team Workspaces
-        </span>
-        <span class="flex items-center gap-1.5 rounded-full border border-shell-border bg-shell-elevated px-3 py-1 text-xs text-shell-muted">
-          <svg class="h-3 w-3 text-shell-warn" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-          </svg>
-          Self-Hosted
-        </span>
+      <!-- Feature cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 text-left">
+        <div class="p-4 rounded-2xl bg-white border border-borderSoft shadow-sm">
+          <iconify-icon icon="lucide:shield-check" class="text-2xl text-sage mb-2"></iconify-icon>
+          <h3 class="text-[13px] font-bold text-charcoal mb-1">Secure</h3>
+          <p class="text-[11px] text-muted leading-snug">E2E encryption for all messages.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-borderSoft shadow-sm">
+          <iconify-icon icon="lucide:layout" class="text-2xl text-clay mb-2"></iconify-icon>
+          <h3 class="text-[13px] font-bold text-charcoal mb-1">Hybrid</h3>
+          <p class="text-[11px] text-muted leading-snug">Slack ease with Jira power.</p>
+        </div>
+        <div class="p-4 rounded-2xl bg-white border border-borderSoft shadow-sm">
+          <iconify-icon icon="lucide:zap" class="text-2xl text-sage mb-2"></iconify-icon>
+          <h3 class="text-[13px] font-bold text-charcoal mb-1">Productive</h3>
+          <p class="text-[11px] text-muted leading-snug">Task tracking built right in.</p>
+        </div>
       </div>
 
       <button
         on:click={() => (showAuth = true)}
-        class="w-full rounded-xl bg-shell-accent py-3 text-base font-semibold text-white transition-colors hover:bg-shell-accentHov focus-visible:ring-2 focus-visible:ring-shell-accent focus-visible:ring-offset-2 focus-visible:ring-offset-shell-sidebar"
+        class="w-full sm:w-64 rounded-2xl bg-sage py-4 text-base font-bold text-white shadow-lg shadow-sage/20 transition-all hover:scale-[1.03] active:scale-95"
       >
-        Get Started
+        Open Workspace
       </button>
 
-      <p class="mt-4 text-xs text-shell-subtle">
-        Open source &middot; Zero knowledge &middot; No tracking
+      <p class="mt-8 text-[11px] font-bold text-muted uppercase tracking-[0.2em]">
+        Free &middot; Open Source &middot; Privacy First
       </p>
     </div>
   </main>
@@ -379,57 +506,52 @@
      ONBOARDING — authenticated, no workspaces
 ═══════════════════════════════════════════════ -->
 {:else if workspacesLoaded && workspaces.length === 0}
-  <main class="flex min-h-screen flex-col items-center justify-center bg-shell-sidebar px-4">
-    <div class="w-full max-w-md animate-slide-up">
-
-      <!-- Welcome card -->
-      <div class="rounded-2xl border border-shell-border bg-shell-elevated p-8 shadow-modal text-center mb-4">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-shell-accent" aria-hidden="true">
+  <main class="flex min-h-screen flex-col items-center justify-center bg-sidebar px-4">
+    <div class="w-full max-w-[420px] animate-slide-up">
+      <div class="p-10 rounded-[40px] bg-white border border-borderSoft shadow-xl text-center mb-6">
+        <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-sage shadow-lg shadow-sage/10" aria-hidden="true">
           <span class="text-xl font-bold text-white">SC</span>
         </div>
-        <h1 class="mb-1 text-2xl font-bold text-shell-ink">
+        <h1 class="mb-2 text-2xl font-bold text-charcoal">
           Welcome, {$auth.username}!
         </h1>
-        <p class="mb-6 text-sm text-shell-muted leading-relaxed">
-          Create a workspace for your team or join one with an invite code to get started.
+        <p class="mb-8 text-sm text-muted font-medium leading-relaxed">
+          Your workspace is empty. Create a new one or join an existing team.
         </p>
 
-        <div class="flex flex-col gap-3">
-          <!-- Create workspace CTA -->
+        <div class="space-y-4">
           <button
             on:click={() => (showCreateWs = true)}
-            class="w-full rounded-xl bg-shell-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-shell-accentHov"
+            class="w-full rounded-2xl bg-sage py-3.5 text-[14px] font-bold text-white shadow-lg shadow-sage/10 transition-all hover:scale-[1.02] active:scale-95"
           >
-            Create a Workspace
+            Create Workspace
           </button>
 
-          <div class="flex items-center gap-3">
-            <hr class="flex-1 border-shell-borderSub" />
-            <span class="text-xs text-shell-subtle">or join with an invite code</span>
-            <hr class="flex-1 border-shell-borderSub" />
+          <div class="flex items-center gap-4 py-2">
+            <div class="flex-1 h-px bg-borderSoft"></div>
+            <span class="text-[10px] font-bold text-muted/60 uppercase tracking-widest">or</span>
+            <div class="flex-1 h-px bg-borderSoft"></div>
           </div>
 
-          <!-- Join workspace -->
           <div class="flex gap-2">
             <input
               type="text"
               bind:value={onboardingInviteCode}
-              placeholder="Paste invite code…"
-              aria-label="Invite code to join a workspace"
-              class="flex-1 rounded-xl border border-shell-border bg-shell-bg px-4 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
+              placeholder="Invite Code..."
+              class="flex-1 rounded-xl border border-borderSoft bg-sidebar/30 px-4 py-3 text-sm text-charcoal placeholder-muted/50 outline-none focus:border-sage focus:ring-4 focus:ring-sage/5 transition-all"
               on:keydown={(e) => e.key === "Enter" && handleOnboardingJoin()}
             />
             <button
               on:click={handleOnboardingJoin}
               disabled={!onboardingInviteCode.trim()}
-              class="rounded-xl bg-shell-surface px-5 py-2.5 text-sm font-medium text-shell-ink transition-colors hover:bg-shell-elevated disabled:opacity-40 disabled:cursor-not-allowed"
+              class="rounded-xl bg-clay px-5 py-3 text-[14px] font-bold text-white shadow-lg shadow-clay/10 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:scale-100"
             >
               Join
             </button>
           </div>
 
           {#if onboardingError}
-            <p class="text-sm text-shell-danger" role="alert">{onboardingError}</p>
+            <p class="text-xs font-bold text-clay mt-2">{onboardingError}</p>
           {/if}
         </div>
       </div>
@@ -437,7 +559,7 @@
       <div class="text-center">
         <button
           on:click={handleLogout}
-          class="text-sm text-shell-subtle transition-colors hover:text-shell-muted"
+          class="text-[11px] font-bold text-muted uppercase tracking-widest hover:text-clay transition-colors"
         >
           Sign out
         </button>
@@ -452,9 +574,8 @@
      MAIN SHELL — authenticated with workspaces
 ═══════════════════════════════════════════════ -->
 {:else}
-  <div class="flex h-screen overflow-hidden bg-shell-bg" role="application" aria-label="SecureCollab">
-
-    <!-- Sidebar -->
+  <div class="flex h-screen overflow-hidden bg-ivory" role="application">
+    <!-- Sidebar (Left) -->
     <Sidebar
       {workspaces} {channels} {directMessages} {activeWorkspace} {activeChannel} {currentUser}
       on:selectWorkspace={handleSelectWorkspace}
@@ -465,54 +586,46 @@
       on:invite={handleOpenInvite}
     />
 
-    <!-- Main content area -->
-    <div class="flex flex-1 flex-col overflow-hidden">
+    <!-- Main Content Area (Middle) -->
+    <div class="flex flex-1 flex-col overflow-hidden bg-white border-r border-borderSoft/50 relative">
       <TopBar
         channelName={activeChannel?.name || ""}
         channelTopic={activeChannel?.topic || ""}
         memberCount={members.length}
+        connectionState={connectionState}
+        liveActivity={formatLiveActivity(lastLiveEventAt)}
         on:showMembers={() => (showMembers = !showMembers)}
+        on:toggleTasks={() => (showTasks = !showTasks)}
       />
 
       <!-- Channel content -->
       {#if !activeChannel}
-        <!-- Empty state: no channels -->
-        <div class="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-          <div class="grid h-16 w-16 place-content-center rounded-2xl bg-shell-surface text-2xl text-shell-subtle" aria-hidden="true">#</div>
-          <div>
-            <p class="mb-1 text-lg font-semibold text-shell-ink">No channels yet</p>
-            <p class="text-sm text-shell-muted">Create a channel to start collaborating with your team.</p>
+        <div class="flex flex-1 flex-col items-center justify-center p-12 text-center">
+          <div class="w-20 h-20 rounded-3xl bg-sidebar flex items-center justify-center mb-6 border border-borderSoft">
+            <iconify-icon icon="lucide:message-square-plus" class="text-4xl text-muted/40"></iconify-icon>
           </div>
+          <h2 class="text-2xl font-bold text-charcoal mb-2">No Channel Selected</h2>
+          <p class="text-muted text-[15px] max-w-sm mb-8 leading-relaxed">
+            Select a channel from the sidebar or create a new one to start collaborating.
+          </p>
           <button
             on:click={() => (showCreateCh = true)}
-            class="rounded-xl bg-shell-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-shell-accentHov"
+            class="px-8 py-3 rounded-2xl bg-sage text-white font-bold shadow-lg shadow-sage/10 transition-all hover:scale-[1.03] active:scale-95"
           >
-            Create Channel
+            Create New Channel
           </button>
         </div>
-
       {:else}
         <!-- Message list -->
-        <div class="flex-1 overflow-y-auto" role="log" aria-label="Message history" aria-live="polite">
+        <div bind:this={messageViewport} class="flex-1 overflow-y-auto custom-scrollbar px-6" role="log">
           {#if messages.length === 0}
-            <!-- Empty channel state -->
-            <div class="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
-              <div class="grid h-14 w-14 place-content-center rounded-2xl bg-shell-surface text-2xl text-shell-subtle" aria-hidden="true">#</div>
-              <div>
-                <p class="text-lg font-bold text-shell-ink">Welcome to #{activeChannel.name}</p>
-                <p class="mt-1 text-sm text-shell-muted leading-relaxed">
-                  This is the start of <span class="font-medium text-shell-ink">#{activeChannel.name}</span>.
-                  All messages are end-to-end encrypted.
-                </p>
-              </div>
-              {#if activeChannel.topic}
-                <div class="max-w-sm rounded-lg border border-shell-borderSub bg-shell-surface px-4 py-2.5 text-sm text-shell-muted">
-                  <span class="font-medium text-shell-ink">Topic:</span> {activeChannel.topic}
-                </div>
-              {/if}
+            <div class="flex h-full flex-col items-center justify-center text-center opacity-40">
+              <iconify-icon icon="lucide:messages-square" class="text-6xl mb-4"></iconify-icon>
+              <p class="text-lg font-bold">Start the conversation</p>
+              <p class="text-sm">Messages are secured with E2E encryption</p>
             </div>
           {:else}
-            <div class="py-2">
+            <div class="py-8 space-y-1">
               {#each messages as msg (msg.id || `${msg.ciphertext_b64}:${msg.nonce_b64}`)}
                 <MessageBubble
                   sender={msg.sender_user_id}
@@ -532,15 +645,22 @@
         </div>
 
         <!-- Message composer -->
-        <MessageInput
-          placeholder="Message #{activeChannel.name}"
-          {members}
-          on:send={handleSend}
-        />
+        <div class="p-6 pt-0">
+          <MessageInput
+            placeholder="Say something friendly in #{activeChannel.name}..."
+            {members}
+            on:send={handleSend}
+          />
+        </div>
       {/if}
     </div>
 
-    <!-- Right panels (Thread + Members) -->
+    <!-- Tasks/Productivity Panel (Right) -->
+    {#if showTasks}
+      <TaskPanel on:close={() => (showTasks = false)} />
+    {/if}
+
+    <!-- Other panels (Thread + Members) - still as overlays for now, or could be integrated -->
     <ThreadPanel
       visible={showThread}
       parentMessage={threadParent}
@@ -562,7 +682,7 @@
     />
   </div>
 
-  <!-- Modals (rendered outside layout flow) -->
+  <!-- Modals -->
   <CreateWorkspaceModal bind:this={wsModal} visible={showCreateWs}
     on:create={handleCreateWorkspace} on:close={() => (showCreateWs = false)} />
 

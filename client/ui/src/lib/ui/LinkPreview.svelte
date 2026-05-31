@@ -21,24 +21,21 @@
   href={url}
   target="_blank"
   rel="noopener noreferrer"
-  class="group mt-1.5 flex max-w-sm items-center gap-3 rounded-lg border border-shell-border bg-shell-elevated px-3 py-2 transition-colors hover:border-shell-accent hover:bg-shell-surface"
-  aria-label="Link preview: {displayUrl}"
+  class="group mt-2 flex max-w-md items-center gap-4 p-3 rounded-2xl border border-borderSoft bg-white hover:bg-sidebar/30 hover:border-sage/30 hover:shadow-lg hover:shadow-stone-200/40 transition-all duration-200"
 >
   <!-- Link icon -->
-  <div class="grid h-8 w-8 flex-shrink-0 place-content-center rounded-md bg-shell-surface text-shell-subtle">
-    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-    </svg>
+  <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-sidebar text-muted/60 group-hover:bg-sage/10 group-hover:text-sage transition-all">
+    <iconify-icon icon="lucide:link" class="text-xl"></iconify-icon>
   </div>
 
   <!-- Text -->
   <div class="min-w-0 flex-1">
-    <p class="truncate text-xs font-medium text-shell-ink group-hover:text-shell-accentText">{displayUrl}</p>
-    <p class="text-xs text-shell-subtle">{domain}</p>
+    <p class="truncate text-[13px] font-bold text-charcoal leading-none mb-1 group-hover:text-sage transition-colors">{displayUrl}</p>
+    <p class="text-[11px] font-bold text-muted/40 uppercase tracking-widest">{domain}</p>
   </div>
 
   <!-- External arrow -->
-  <svg class="h-3.5 w-3.5 flex-shrink-0 text-shell-subtle opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-  </svg>
+  <div class="w-8 h-8 flex items-center justify-center rounded-lg text-muted/30 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+    <iconify-icon icon="lucide:external-link" class="text-lg"></iconify-icon>
+  </div>
 </a>

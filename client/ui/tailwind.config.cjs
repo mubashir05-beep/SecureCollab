@@ -4,47 +4,39 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Dark shell — Slack-inspired dark palette
-        shell: {
-          // Sidebar / workspace rail
-          sidebar:   "#1a1d21",  // deepest dark — workspace rail bg
-          panel:     "#19171d",  // channel panel bg (slightly purple-tinted dark)
-          // Main content
-          bg:        "#1d2026",  // main area background
-          surface:   "#222529",  // message hover / elevated surfaces
-          elevated:  "#2b2d31",  // cards, tooltips, modals within dark
-          // Borders
-          border:    "#3f4147",  // default divider
-          borderSub: "#2b2d31",  // subtle divider
-          // Text
-          ink:       "#e3e5e8",  // primary text
-          muted:     "#949ba4",  // secondary / metadata text
-          subtle:    "#6d7379",  // placeholder / disabled text
-          // Accent — indigo
-          accent:    "#5865f2",  // Discord/Notion-style indigo — primary CTA
-          accentHov: "#4752c4",  // hover
-          accentText:"#c9ccff",  // accent on dark bg
-          // Semantic
-          success:   "#23a55a",
-          warn:      "#f0b232",
-          danger:    "#f23f42",
-          dangerBg:  "#3a1b1b",
-          // Mention highlight
-          mention:   "#444271",
-          mentionTxt:"#c9ccff",
+        // SecureCollab Design System Colors
+        ivory: "#FAF9F6",        // Main background - warm off-white
+        sidebar: "#F5F2ED",      // Sidebar background - slightly warmer
+        sage: "#8A9A5B",         // Primary accent - calm green
+        clay: "#B07D62",         // Secondary accent - warm terracotta
+        charcoal: "#2C2C2C",     // Primary text - dark charcoal
+        muted: "#7A7672",        // Secondary text - gray-brown
+        borderSoft: "#EAE3D9",   // Borders - very light
+        stone: {
+          200: "#e5e7eb",
+          300: "#d1d5db",
+          400: "#9ca3af",
+          500: "#6b7280",
+          800: "#1f2937",
         }
       },
       fontFamily: {
-        sans:    ['"Inter"', '"Segoe UI"', '"system-ui"', 'sans-serif'],
-        mono:    ['"JetBrains Mono"', '"Fira Code"', '"IBM Plex Mono"', 'monospace'],
+        sans: ['"Outfit"', '"Inter"', '"Segoe UI"', '"system-ui"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', '"IBM Plex Mono"', 'monospace'],
       },
       fontSize: {
         "2xs": ["0.625rem", { lineHeight: "0.875rem" }],
+        "xs": ["12px", { lineHeight: "1.4" }],
+        "sm": ["13px", { lineHeight: "1.4" }],
+        "base": ["14px", { lineHeight: "1.6" }],
+        "lg": ["15px", { lineHeight: "1.3" }],
+        "xl": ["18px", { lineHeight: "1.2" }],
       },
       boxShadow: {
-        panel:  "0 2px 8px rgba(0,0,0,0.4)",
-        modal:  "0 8px 32px rgba(0,0,0,0.6)",
-        tooltip:"0 2px 4px rgba(0,0,0,0.5)",
+        sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        md: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+        lg: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+        xl: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
       },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },

@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import Button from "./Button.svelte";
 
   export let visible = false;
   export let members = [];
@@ -13,17 +14,17 @@
   const dispatch = createEventDispatcher();
 
   const roleBadge = {
-    owner:  "bg-amber-400/15 text-amber-400 border-amber-400/20",
-    admin:  "bg-violet-400/15 text-violet-400 border-violet-400/20",
-    member: "bg-shell-elevated text-shell-muted border-shell-border",
-    viewer: "bg-shell-elevated text-shell-subtle border-shell-border",
+    owner:  "bg-clay/10 text-clay border-clay/20",
+    admin:  "bg-sage/10 text-sage border-sage/20",
+    member: "bg-sidebar text-muted border-borderSoft",
+    viewer: "bg-sidebar text-muted/60 border-borderSoft",
   };
 
-  // Avatar color deterministic from username
+  // Premium Avatar Palette
   const avatarPalette = [
-    "bg-indigo-500", "bg-violet-500", "bg-sky-500",
-    "bg-teal-500",   "bg-rose-500",   "bg-amber-500",
-    "bg-green-600",  "bg-pink-500",
+    "bg-sage", "bg-clay", "bg-charcoal",
+    "bg-stone-400", "bg-[#A8A29E]", "bg-[#78716C]",
+    "bg-[#44403C]", "bg-[#1C1917]",
   ];
   function avatarBg(name = "") {
     return avatarPalette[(name.charCodeAt(0) || 0) % avatarPalette.length];
@@ -45,111 +46,106 @@
 
 {#if visible}
   <aside
-    class="flex w-72 flex-shrink-0 flex-col border-l border-shell-borderSub bg-shell-bg animate-fade-in"
+    class="w-80 h-full flex flex-col border-l border-borderSoft/50 bg-sidebar overflow-hidden animate-fade-in"
     aria-label="Members panel"
   >
     <!-- Header -->
-    <div class="flex h-12 flex-shrink-0 items-center justify-between border-b border-shell-borderSub px-4">
-      <div>
-        <h3 class="text-sm font-bold text-shell-ink">Members</h3>
-        <p class="text-xs text-shell-subtle">
-          {members.length} {members.length === 1 ? "member" : "members"}
-        </p>
+    <div class="h-[72px] flex items-center justify-between px-6 border-b border-borderSoft/50">
+      <div class="flex flex-col">
+        <h3 class="text-[15px] font-bold text-charcoal tracking-tight">Workspace Members</h3>
+        <span class="text-[11px] font-bold text-muted/40 uppercase tracking-widest">
+          {members.length} {members.length === 1 ? "User" : "Users"} Online
+        </span>
       </div>
       <button
         on:click={() => dispatch("close")}
-        class="rounded-md p-1.5 text-shell-subtle transition-colors hover:bg-shell-surface hover:text-shell-ink"
-        aria-label="Close members panel"
+        class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white text-muted hover:text-clay transition-all"
       >
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
       </button>
     </div>
 
-    <!-- Add member form (admin only) -->
+    <!-- Add member section (admin only) -->
     {#if isAdmin}
-      <div class="border-b border-shell-borderSub px-4 py-3">
-        <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-shell-subtle">Add member</p>
+      <div class="p-6 border-b border-borderSoft/30 bg-white/40">
+        <h4 class="text-[11px] font-bold text-muted uppercase tracking-widest mb-4">Add Team Member</h4>
         {#if error}
-          <p class="mb-2 rounded-md bg-shell-dangerBg px-2 py-1 text-xs text-shell-danger">{error}</p>
+          <div class="mb-4 p-3 rounded-xl bg-red-50 text-[12px] font-bold text-red-500 border border-red-100">
+            {error}
+          </div>
         {/if}
-        <div class="flex gap-1.5">
+        <div class="space-y-3">
           <input
             type="text"
             bind:value={addUserId}
-            placeholder="Username"
-            class="flex-1 rounded-lg border border-shell-border bg-shell-elevated px-2.5 py-1.5 text-xs text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent"
+            placeholder="Search by ID or email..."
+            class="w-full px-4 py-3 rounded-xl border border-borderSoft bg-white text-[13px] font-medium focus:border-sage focus:ring-4 focus:ring-sage/5 transition-all outline-none"
             on:keydown={(e) => e.key === "Enter" && handleAdd()}
-            aria-label="User ID or username to add"
           />
-          <select
-            bind:value={addRole}
-            class="rounded-lg border border-shell-border bg-shell-elevated px-1.5 py-1.5 text-xs text-shell-muted outline-none focus:border-shell-accent"
-            aria-label="Role"
-          >
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
-            <option value="viewer">Viewer</option>
-          </select>
+          <div class="flex gap-2">
+            <select
+              bind:value={addRole}
+              class="flex-1 px-4 py-3 rounded-xl border border-borderSoft bg-white text-[13px] font-medium outline-none focus:border-sage transition-all"
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <Button variant="sage" on:click={handleAdd} disabled={!addUserId.trim()}>
+              <iconify-icon icon="lucide:plus" class="text-lg"></iconify-icon>
+            </Button>
+          </div>
         </div>
-        <button
-          on:click={handleAdd}
-          disabled={!addUserId.trim()}
-          class="mt-2 w-full rounded-lg bg-shell-accent py-1.5 text-xs font-medium text-white transition-colors hover:bg-shell-accentHov disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Add Member
-        </button>
       </div>
     {/if}
 
     <!-- Member list -->
-    <div class="flex-1 overflow-y-auto py-2" role="list" aria-label="Workspace members">
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-1">
       {#each members as member (member.user_id)}
         {@const displayName = member.username || member.user_id}
         {@const isCurrentUser = member.user_id === currentUserId}
         <div
-          class="group flex items-center gap-3 px-4 py-2 transition-colors hover:bg-shell-surface"
-          role="listitem"
+          class="group flex items-center gap-3 p-3 rounded-2xl hover:bg-white hover:shadow-sm transition-all"
         >
           <!-- Avatar -->
           <div
-            class="grid h-8 w-8 flex-shrink-0 place-content-center rounded-lg text-xs font-bold text-white {avatarBg(displayName)}"
-            aria-hidden="true"
+            class="w-10 h-10 flex items-center justify-center rounded-2xl text-xs font-bold text-white shadow-sm {avatarBg(displayName)} transition-transform group-hover:scale-105"
           >
             {displayName.charAt(0).toUpperCase()}
           </div>
 
           <!-- Name + role -->
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-shell-ink">
-              {displayName}
+            <div class="flex items-center gap-2">
+              <span class="truncate text-[14px] font-bold text-charcoal">
+                {displayName}
+              </span>
               {#if isCurrentUser}
-                <span class="ml-1 text-xs font-normal text-shell-subtle">(you)</span>
+                <span class="text-[10px] font-bold text-sage bg-sage/10 px-1.5 py-0.5 rounded-md uppercase tracking-tight">You</span>
               {/if}
-            </p>
-            <span class="inline-flex items-center rounded border px-1.5 py-px text-[10px] font-semibold {roleBadge[member.role] || roleBadge.member}">
-              {member.role || "member"}
-            </span>
+            </div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-lg border text-[10px] font-bold uppercase tracking-tight {roleBadge[member.role] || roleBadge.member}">
+                {member.role || "member"}
+              </span>
+            </div>
           </div>
 
-          <!-- Remove (admin only, not self, not owner) -->
+          <!-- Actions -->
           {#if isAdmin && !isCurrentUser && member.role !== "owner"}
             <button
               on:click={() => handleRemove(member.user_id)}
-              class="rounded-md p-1 text-shell-subtle opacity-0 transition-all group-hover:opacity-100 hover:bg-shell-dangerBg hover:text-shell-danger"
-              title="Remove {displayName}"
-              aria-label="Remove {displayName} from workspace"
+              class="w-8 h-8 flex items-center justify-center rounded-lg text-muted opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+              title="Remove member"
             >
-              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <iconify-icon icon="lucide:user-minus" class="text-lg"></iconify-icon>
             </button>
           {/if}
         </div>
       {:else}
-        <div class="p-6 text-center">
-          <p class="text-sm text-shell-subtle">No members found.</p>
+        <div class="p-12 text-center space-y-3">
+          <iconify-icon icon="lucide:users" class="text-4xl text-muted/20"></iconify-icon>
+          <p class="text-[13px] font-bold text-muted/40 uppercase tracking-widest">No members found</p>
         </div>
       {/each}
     </div>

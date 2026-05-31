@@ -13,51 +13,49 @@
 
 {#if visible && parentMessage}
   <aside
-    class="flex w-80 flex-shrink-0 flex-col border-l border-shell-borderSub bg-shell-bg animate-fade-in"
+    class="w-96 h-full flex flex-col border-l border-borderSoft/50 bg-sidebar overflow-hidden animate-fade-in"
     aria-label="Thread panel"
   >
     <!-- Header -->
-    <div class="flex h-12 flex-shrink-0 items-center justify-between border-b border-shell-borderSub px-4">
-      <div>
-        <h3 class="text-sm font-bold text-shell-ink">Thread</h3>
-        <p class="text-xs text-shell-subtle">
-          {replies.length} {replies.length === 1 ? "reply" : "replies"}
-        </p>
+    <div class="h-[72px] flex items-center justify-between px-6 border-b border-borderSoft/50">
+      <div class="flex flex-col">
+        <h3 class="text-[15px] font-bold text-charcoal tracking-tight">Message Thread</h3>
+        <span class="text-[11px] font-bold text-muted/40 uppercase tracking-widest">
+          {replies.length} {replies.length === 1 ? "Reply" : "Replies"}
+        </span>
       </div>
       <button
         on:click={() => dispatch("close")}
-        class="rounded-md p-1.5 text-shell-subtle transition-colors hover:bg-shell-surface hover:text-shell-ink"
-        aria-label="Close thread panel"
+        class="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white text-muted hover:text-clay transition-all"
       >
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
       </button>
     </div>
 
     <!-- Parent message (highlighted) -->
-    <div class="border-b border-shell-borderSub bg-shell-surface/50">
+    <div class="border-b border-borderSoft/30 bg-white/40 p-1">
       <MessageBubble
         sender={parentMessage.sender_user_id}
         content={getDecrypted(parentMessage)}
         timestamp={parentMessage.created_at}
+        isPinned={true} 
       />
     </div>
 
     <!-- Replies list -->
-    <div class="flex-1 overflow-y-auto" role="feed" aria-label="Thread replies">
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-2" role="feed">
       {#if replies.length === 0}
-        <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-          <div class="grid h-10 w-10 place-content-center rounded-xl bg-shell-surface text-shell-subtle">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-            </svg>
+        <div class="flex flex-col items-center justify-center gap-4 py-20 text-center px-8">
+          <div class="w-16 h-16 rounded-3xl bg-sidebar flex items-center justify-center text-muted/30 border border-borderSoft/50">
+            <iconify-icon icon="lucide:message-square" class="text-3xl"></iconify-icon>
           </div>
-          <p class="text-sm font-medium text-shell-muted">No replies yet</p>
-          <p class="text-xs text-shell-subtle">Be the first to reply in this thread.</p>
+          <div class="space-y-1">
+            <p class="text-[14px] font-bold text-charcoal">No replies yet</p>
+            <p class="text-[12px] font-medium text-muted">Be the first to share your thoughts in this thread.</p>
+          </div>
         </div>
       {:else}
-        <div class="py-1">
+        <div class="space-y-1">
           {#each replies as reply}
             <MessageBubble
               sender={reply.sender_user_id}
@@ -70,9 +68,11 @@
     </div>
 
     <!-- Reply input -->
-    <MessageInput
-      placeholder="Reply in thread..."
-      on:send={(e) => dispatch("reply", e.detail)}
-    />
+    <div class="p-2 bg-white">
+      <MessageInput
+        placeholder="Reply to thread..."
+        on:send={(e) => dispatch("reply", e.detail)}
+      />
+    </div>
   </aside>
 {/if}

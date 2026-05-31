@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher } from "svelte";
 
-  export let placeholder = "Message #channel";
+  export let placeholder = "Say something friendly...";
   export let disabled = false;
   export let members = []; // { user_id, username, role }
 
@@ -26,7 +26,6 @@
       .slice(0, 8);
   })();
 
-  // Close mention popup when no candidates remain
   $: if (showMentions && mentionCandidates.length === 0) showMentions = false;
 
   function handleInput(e) {
@@ -77,95 +76,98 @@
   }
 </script>
 
-<div class="relative border-t border-shell-borderSub bg-shell-bg px-4 py-3">
+<div class="relative bg-white border-t border-borderSoft/30 px-6 py-4">
 
   <!-- Mention autocomplete -->
   {#if showMentions && mentionCandidates.length > 0}
     <div
-      class="absolute bottom-full left-4 right-4 mb-1 overflow-hidden rounded-xl border border-shell-border bg-shell-elevated shadow-panel animate-slide-up z-50"
+      class="absolute bottom-full left-6 right-6 z-50 mb-3 overflow-hidden rounded-[24px] border border-borderSoft bg-white shadow-2xl animate-slide-up"
       role="listbox"
-      aria-label="Mention suggestions"
     >
       {#each mentionCandidates as candidate, i}
         <button
           role="option"
           aria-selected={i === mentionIndex}
-          class="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors
-            {i === mentionIndex ? 'bg-shell-accent/20 text-white' : 'text-shell-muted hover:bg-shell-surface hover:text-shell-ink'}"
+          class="flex w-full items-center gap-3 px-4 py-3 text-left text-[13px] transition-all
+            {i === mentionIndex ? 'bg-sage/10 text-sage' : 'text-muted hover:bg-sidebar/50 hover:text-charcoal'}"
           on:mousedown|preventDefault={() => insertMention(candidate)}
         >
-          <div class="grid h-6 w-6 flex-shrink-0 place-content-center rounded-md text-xs font-bold
-            {candidate.role === 'notify' ? 'bg-shell-warn/20 text-shell-warn' : 'bg-shell-surface text-shell-muted'}">
+          <div class="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg font-bold text-[11px]
+            {candidate.role === 'notify' ? 'bg-clay/10 text-clay' : 'bg-sidebar text-muted'}">
             {candidate.role === "notify" ? "@" : candidate.username?.charAt(0)?.toUpperCase() || "?"}
           </div>
-          <span class="font-medium text-shell-ink">
+          <span class="font-bold">
             {candidate.user_id.startsWith("@") ? candidate.user_id : `@${candidate.username}`}
           </span>
           {#if candidate.role && candidate.role !== "notify"}
-            <span class="ml-auto text-xs text-shell-subtle">{candidate.role}</span>
+            <span class="ml-auto text-[10px] font-bold text-muted/40 uppercase tracking-tight">{candidate.role}</span>
           {/if}
         </button>
       {/each}
     </div>
   {/if}
 
-  <!-- Input box -->
-  <div
-    class="flex items-end gap-2 rounded-xl border border-shell-border bg-shell-elevated px-3 py-2 transition-colors duration-150 focus-within:border-shell-accent"
-  >
-    <!-- Attach button -->
-    <button
-      class="flex-shrink-0 rounded-md p-1 text-shell-subtle transition-colors hover:bg-shell-surface hover:text-shell-ink"
-      title="Attach file (coming soon)"
-      aria-label="Attach file"
-      on:click={() => dispatch("attach")}
-    >
-      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-      </svg>
-    </button>
+  <!-- Main Input Container -->
+  <div class="bg-white rounded-[24px] border border-borderSoft shadow-xl shadow-stone-200/40 overflow-hidden focus-within:ring-4 focus-within:ring-sage/10 transition-all">
+    <!-- Toolbar -->
+    <div class="flex items-center gap-1 px-4 py-2 border-b border-ivory bg-sidebar/30">
+      <button class="w-8 h-8 rounded-lg text-muted/60 hover:text-charcoal hover:bg-white transition-all flex items-center justify-center">
+        <iconify-icon icon="lucide:bold"></iconify-icon>
+      </button>
+      <button class="w-8 h-8 rounded-lg text-muted/60 hover:text-charcoal hover:bg-white transition-all flex items-center justify-center">
+        <iconify-icon icon="lucide:italic"></iconify-icon>
+      </button>
+      <button class="w-8 h-8 rounded-lg text-muted/60 hover:text-charcoal hover:bg-white transition-all flex items-center justify-center">
+        <iconify-icon icon="lucide:link"></iconify-icon>
+      </button>
+      <div class="w-px h-4 bg-borderSoft/60 mx-1"></div>
+      <button class="w-8 h-8 rounded-lg text-muted/60 hover:text-charcoal hover:bg-white transition-all flex items-center justify-center">
+        <iconify-icon icon="lucide:list"></iconify-icon>
+      </button>
+      <button class="w-8 h-8 rounded-lg text-muted/60 hover:text-charcoal hover:bg-white transition-all flex items-center justify-center ml-auto">
+        <iconify-icon icon="lucide:smile"></iconify-icon>
+      </button>
+    </div>
 
-    <!-- Textarea -->
-    <textarea
-      bind:this={textarea}
-      bind:value={text}
-      on:keydown={handleKeydown}
-      on:input={handleInput}
-      {placeholder}
-      rows="1"
-      {disabled}
-      aria-label={placeholder}
-      class="flex-1 resize-none bg-transparent text-sm text-shell-ink placeholder-shell-subtle outline-none leading-relaxed"
-      style="max-height: 160px;"
-    ></textarea>
+    <div class="relative">
+      <textarea
+        bind:this={textarea}
+        bind:value={text}
+        on:keydown={handleKeydown}
+        on:input={handleInput}
+        {placeholder}
+        {disabled}
+        class="w-full px-5 py-4 bg-transparent border-none text-[14px] font-medium text-charcoal outline-none resize-none h-24 placeholder:text-muted/30 leading-relaxed custom-scrollbar"
+      ></textarea>
 
-    <!-- Emoji button -->
-    <button
-      class="flex-shrink-0 rounded-md p-1 text-shell-subtle transition-colors hover:bg-shell-surface hover:text-shell-ink"
-      title="Insert emoji"
-      aria-label="Insert emoji"
-    >
-      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    </button>
+      <!-- Bottom Actions -->
+      <div class="absolute bottom-3 right-3 flex items-center gap-2">
+        <button
+          class="w-10 h-10 rounded-2xl bg-sidebar text-muted hover:text-charcoal hover:bg-white border border-borderSoft/50 transition-all flex items-center justify-center"
+          on:click={() => dispatch("attach")}
+        >
+          <iconify-icon icon="lucide:plus" class="text-xl"></iconify-icon>
+        </button>
 
-    <!-- Send button -->
-    <button
-      on:click={send}
-      disabled={!text.trim() || disabled}
-      title="Send message (Enter)"
-      aria-label="Send message"
-      class="flex-shrink-0 rounded-lg bg-shell-accent p-1.5 text-white transition-colors hover:bg-shell-accentHov disabled:opacity-30 disabled:cursor-not-allowed"
-    >
-      <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-        <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-      </svg>
-    </button>
+        <button
+          on:click={send}
+          disabled={!text.trim() || disabled}
+          class="px-6 py-2.5 bg-clay text-white rounded-2xl text-[13px] font-bold shadow-lg shadow-clay/20 hover:scale-[1.03] active:scale-95 transition-all flex items-center gap-2 disabled:opacity-30 disabled:scale-100"
+        >
+          <span>Send</span>
+          <iconify-icon icon="lucide:send" class="text-sm"></iconify-icon>
+        </button>
+      </div>
+    </div>
   </div>
 
-  <!-- Hint text -->
-  <p class="mt-1 pl-1 text-xs text-shell-subtle">
-    Enter to send &middot; Shift+Enter for new line &middot; @ to mention
-  </p>
+  <div class="mt-3 flex items-center justify-between px-2">
+    <p class="text-[11px] font-bold text-muted/40 uppercase tracking-widest">
+      Shift + Enter for new line
+    </p>
+    <div class="flex items-center gap-3">
+      <iconify-icon icon="lucide:video" class="text-muted/40 text-lg cursor-pointer hover:text-sage transition-colors"></iconify-icon>
+      <iconify-icon icon="lucide:mic" class="text-muted/40 text-lg cursor-pointer hover:text-clay transition-colors"></iconify-icon>
+    </div>
+  </div>
 </div>

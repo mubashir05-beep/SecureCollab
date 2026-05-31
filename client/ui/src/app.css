@@ -4,8 +4,25 @@
 
 /* ── Base reset & typography ── */
 @layer base {
+  :root {
+    --bg-ivory: #FAF9F6;
+    --bg-sidebar: #F5F2ED;
+    --accent-sage: #8A9A5B;
+    --accent-clay: #B07D62;
+    --text-main: #2C2C2C;
+    --text-muted: #7A7672;
+    --border-soft: #EAE3D9;
+  }
+
   *, *::before, *::after {
     box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
   }
 
   html {
@@ -15,16 +32,37 @@
   }
 
   body {
-    margin: 0;
-    min-height: 100vh;
-    background-color: #1a1d21;
-    color: #e3e5e8;
-    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-    font-size: 0.9375rem;
-    line-height: 1.5;
+    background-color: var(--bg-ivory);
+    color: var(--text-main);
+    font-family: "Outfit", system-ui, sans-serif;
   }
 
-  /* Custom scrollbar — minimal, Slack-inspired */
+  #app {
+    isolation: isolate;
+  }
+
+  ::selection {
+    background: rgba(138, 154, 91, 0.3); /* Sage with opacity */
+    color: var(--text-main);
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #DED6C9;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #C4BCAE;
+  }
+
+  /* Default custom scrollbar for overall app if needed */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -33,26 +71,45 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   /* Focus ring — keyboard nav */
   :focus-visible {
-    outline: 2px solid #5865f2;
+    outline: 2px solid var(--accent-sage);
     outline-offset: 2px;
   }
 }
 
-/* ── Markdown text rendering (dark-mode) ── */
 @layer components {
+  .nav-item-active {
+    background-color: white;
+    color: var(--accent-sage);
+    box-shadow: 0 4px 12px -2px rgba(138, 154, 91, 0.08);
+  }
+
+  .glass-header {
+    background: rgba(250, 249, 246, 0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .sidebar-transition {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .label-transition {
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  }
+
+  /* Keep legacy MD classes if they are used by MarkdownText component but adapt colors */
   .md-codeblock {
-    background: #111214;
-    border: 1px solid #3f4147;
-    border-radius: 0.375rem;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border-soft);
+    border-radius: 0.75rem;
     padding: 0.75rem 1rem;
     margin: 0.375rem 0;
     overflow-x: auto;
@@ -60,45 +117,45 @@
     font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
     white-space: pre;
     display: block;
-    color: #e3e5e8;
+    color: var(--text-main);
   }
 
   .md-inline-code {
-    background: #111214;
-    border: 1px solid #3f4147;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-soft);
     border-radius: 0.25rem;
     padding: 0.1rem 0.35rem;
     font-size: 0.8125rem;
     font-family: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
-    color: #e06c75;
+    color: var(--accent-clay);
   }
 
   .md-link {
-    color: #c9ccff;
+    color: var(--accent-sage);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
   .md-link:hover {
-    color: #ffffff;
+    color: #6a7844;
   }
 
   .md-mention {
-    background: #444271;
-    color: #c9ccff;
+    background: rgba(138, 154, 91, 0.1);
+    color: var(--accent-sage);
     border-radius: 0.25rem;
     padding: 0.05rem 0.3rem;
     font-weight: 500;
     cursor: pointer;
   }
   .md-mention:hover {
-    background: #5865f2;
-    color: #ffffff;
+    background: var(--accent-sage);
+    color: white;
   }
 
   .md-blockquote {
-    border-left: 3px solid #5865f2;
+    border-left: 3px solid var(--accent-sage);
     padding-left: 0.75rem;
-    color: #949ba4;
+    color: var(--text-muted);
     margin: 0.25rem 0;
     display: block;
   }

@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import Button from "./Button.svelte";
 
   export let visible = false;
   export let inviteCode = "";
@@ -15,12 +16,10 @@
   export function reset() { joinCode = ""; error = ""; copied = false; }
 
   function copyCode() {
-    // Use Tauri-compatible clipboard approach: navigator.clipboard works in Tauri WebView
     navigator.clipboard.writeText(inviteCode).then(() => {
       copied = true;
       setTimeout(() => (copied = false), 2000);
     }).catch(() => {
-      // Fallback for restricted contexts
       const el = document.createElement("textarea");
       el.value = inviteCode;
       document.body.appendChild(el);
@@ -43,102 +42,91 @@
 
 {#if visible}
   <div
-    class="fixed inset-0 z-50 grid place-content-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in"
+    class="fixed inset-0 z-[110] grid place-content-center bg-charcoal/40 p-4 backdrop-blur-md animate-fade-in"
     on:click={(e) => e.currentTarget === e.target && close()}
     on:keydown={(e) => e.key === "Escape" && close()}
     role="button"
     tabindex="0"
-    aria-label="Close dialog"
   >
     <div
-      class="w-[min(440px,90vw)] rounded-2xl border border-shell-border bg-shell-elevated p-6 shadow-modal animate-slide-up"
+      class="w-[min(480px,90vw)] rounded-[40px] border border-borderSoft bg-white p-10 shadow-2xl animate-slide-up relative"
       role="dialog"
       tabindex="-1"
       aria-modal="true"
-      aria-labelledby="invite-modal-title"
     >
+      <button 
+        on:click={close}
+        class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-xl hover:bg-sidebar text-muted transition-all"
+      >
+        <iconify-icon icon="lucide:x" class="text-xl"></iconify-icon>
+      </button>
+
       <!-- Header -->
-      <div class="mb-5 flex items-start justify-between">
-        <div>
-          <h2 id="invite-modal-title" class="text-lg font-bold text-shell-ink">Invite & Join</h2>
-          <p class="mt-1 text-sm text-shell-muted">Share a code or join a workspace.</p>
+      <div class="text-center mb-8">
+        <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-sage shadow-lg shadow-sage/10 text-white" aria-hidden="true">
+          <iconify-icon icon="lucide:user-plus" class="text-3xl"></iconify-icon>
         </div>
-        <button
-          on:click={close}
-          class="rounded-md p-1.5 text-shell-subtle transition-colors hover:bg-shell-surface hover:text-shell-ink"
-          aria-label="Close invite dialog"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <h3 class="text-2xl font-bold text-charcoal mb-2">Invite & Join</h3>
+        <p class="text-sm text-muted font-medium">Expand your team or enter a new workspace.</p>
       </div>
 
       {#if error}
-        <div class="mb-4 rounded-lg bg-shell-dangerBg px-3 py-2.5 text-sm text-shell-danger" role="alert">{error}</div>
+        <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start gap-3 animate-slide-up">
+          <iconify-icon icon="lucide:alert-circle" class="text-red-500 text-xl flex-shrink-0"></iconify-icon>
+          <p class="text-sm font-bold text-red-600">{error}</p>
+        </div>
       {/if}
 
-      <!-- Share invite code section -->
-      {#if inviteCode}
-        <div class="mb-5">
-          <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-shell-subtle">
-            Invite to <span class="text-shell-muted">{workspaceName}</span>
-          </p>
-          <div class="flex gap-2">
+      <div class="space-y-8">
+        <!-- Share invite code section -->
+        {#if inviteCode}
+          <div class="space-y-4">
+            <div class="flex items-center justify-between px-1">
+              <label class="text-[11px] font-bold text-muted uppercase tracking-widest">Invite to {workspaceName}</label>
+            </div>
+            <div class="flex gap-3">
+              <div class="flex-1 relative">
+                <input
+                  type="text"
+                  value={inviteCode}
+                  readonly
+                  class="w-full px-5 py-4 rounded-2xl border border-borderSoft bg-sidebar/20 text-charcoal font-mono text-sm outline-none select-all"
+                />
+              </div>
+              <Button variant={copied ? "primary" : "sage"} on:click={copyCode}>
+                {#if copied}
+                  <iconify-icon icon="lucide:check" class="text-lg"></iconify-icon>
+                {:else}
+                  <iconify-icon icon="lucide:copy" class="text-lg"></iconify-icon>
+                {/if}
+              </Button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-4 py-2">
+            <div class="flex-1 h-px bg-borderSoft"></div>
+            <span class="text-[10px] font-bold text-muted/40 uppercase tracking-widest">or</span>
+            <div class="flex-1 h-px bg-borderSoft"></div>
+          </div>
+        {/if}
+
+        <!-- Join with code -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between px-1">
+            <label class="text-[11px] font-bold text-muted uppercase tracking-widest">Join with Code</label>
+          </div>
+          <div class="flex gap-3">
             <input
               type="text"
-              value={inviteCode}
-              readonly
-              aria-label="Invite code"
-              class="flex-1 rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 font-mono text-sm text-shell-ink outline-none select-all"
+              bind:value={joinCode}
+              placeholder="Paste invite code..."
+              class="flex-1 px-5 py-4 rounded-2xl border border-borderSoft bg-sidebar/20 text-charcoal font-medium focus:border-sage focus:ring-4 focus:ring-sage/5 transition-all outline-none"
+              on:keydown={(e) => e.key === "Enter" && handleJoin()}
             />
-            <button
-              on:click={copyCode}
-              class="flex-shrink-0 rounded-lg bg-shell-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-shell-accentHov"
-              aria-label="{copied ? 'Copied' : 'Copy invite code'}"
-            >
-              {#if copied}
-                <span class="flex items-center gap-1">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Copied
-                </span>
-              {:else}
-                Copy
-              {/if}
-            </button>
+            <Button variant="clay" on:click={handleJoin} disabled={!joinCode.trim()}>
+              Join
+            </Button>
           </div>
-        </div>
-
-        <div class="mb-5 flex items-center gap-3">
-          <hr class="flex-1 border-shell-borderSub" />
-          <span class="text-xs text-shell-subtle">or</span>
-          <hr class="flex-1 border-shell-borderSub" />
-        </div>
-      {/if}
-
-      <!-- Join with code -->
-      <div>
-        <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-shell-subtle">
-          Join a workspace
-        </p>
-        <div class="flex gap-2">
-          <input
-            type="text"
-            bind:value={joinCode}
-            placeholder="Paste invite code…"
-            aria-label="Enter invite code to join"
-            class="flex-1 rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
-            on:keydown={(e) => e.key === "Enter" && handleJoin()}
-          />
-          <button
-            on:click={handleJoin}
-            disabled={!joinCode.trim()}
-            class="flex-shrink-0 rounded-lg bg-shell-surface px-4 py-2 text-sm font-medium text-shell-ink transition-colors hover:bg-shell-elevated disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Join
-          </button>
         </div>
       </div>
     </div>

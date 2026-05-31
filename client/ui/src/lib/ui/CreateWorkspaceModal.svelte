@@ -26,61 +26,62 @@
 
 {#if visible}
   <div
-    class="fixed inset-0 z-50 grid place-content-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in"
+    class="fixed inset-0 z-[110] grid place-content-center bg-charcoal/40 p-4 backdrop-blur-md animate-fade-in"
     on:click={(e) => e.currentTarget === e.target && close()}
     on:keydown={(e) => e.key === "Escape" && close()}
     role="button"
     tabindex="0"
-    aria-label="Close dialog"
   >
     <div
-      class="w-[min(440px,90vw)] rounded-2xl border border-shell-border bg-shell-elevated p-6 shadow-modal animate-slide-up"
+      class="w-[min(480px,90vw)] rounded-[40px] border border-borderSoft bg-white p-10 shadow-2xl animate-slide-up"
       role="dialog"
       tabindex="-1"
       aria-modal="true"
-      aria-labelledby="create-ws-title"
     >
       <!-- Header -->
-      <div class="mb-5">
-        <div class="mb-3 grid h-10 w-10 place-content-center rounded-xl bg-shell-accent/20 text-shell-accent" aria-hidden="true">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 00-1-1h-2a1 1 0 00-1 1v5m4 0H9" />
-          </svg>
+      <div class="text-center mb-8">
+        <div class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-sage shadow-lg shadow-sage/10 text-white" aria-hidden="true">
+          <iconify-icon icon="lucide:layout-grid" class="text-3xl"></iconify-icon>
         </div>
-        <h3 id="create-ws-title" class="text-lg font-bold text-shell-ink">Create a Workspace</h3>
-        <p class="mt-1 text-sm text-shell-muted">Workspaces are where your team collaborates.</p>
+        <h3 class="text-2xl font-bold text-charcoal mb-2">Create a Workspace</h3>
+        <p class="text-sm text-muted font-medium">Define your new hub for collaboration.</p>
       </div>
 
       {#if error}
-        <div class="mb-4 rounded-lg bg-shell-dangerBg px-3 py-2.5 text-sm text-shell-danger" role="alert">{error}</div>
+        <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 flex items-start gap-3 animate-slide-up">
+          <iconify-icon icon="lucide:alert-circle" class="text-red-500 text-xl flex-shrink-0"></iconify-icon>
+          <p class="text-sm font-bold text-red-600">{error}</p>
+        </div>
       {/if}
 
-      <form on:submit|preventDefault={submit} class="space-y-4">
-        <div>
-          <label for="ws-name" class="mb-1.5 block text-xs font-medium text-shell-muted">Workspace name</label>
+      <form on:submit|preventDefault={submit} class="space-y-6">
+        <div class="space-y-2">
+          <label for="ws-name" class="text-[11px] font-bold text-muted uppercase tracking-widest ml-1">Workspace Name</label>
           <input
             id="ws-name"
             type="text"
             bind:value={name}
             required
-            placeholder="e.g. Engineering Team"
-            class="w-full rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30"
+            placeholder="e.g. Creative Labs"
+            class="w-full px-5 py-4 rounded-2xl border border-borderSoft bg-sidebar/20 text-charcoal font-medium focus:border-sage focus:ring-4 focus:ring-sage/5 transition-all outline-none"
           />
         </div>
-        <div>
-          <label for="ws-desc" class="mb-1.5 block text-xs font-medium text-shell-muted">Description <span class="text-shell-subtle font-normal">(optional)</span></label>
+        
+        <div class="space-y-2">
+          <label for="ws-desc" class="text-[11px] font-bold text-muted uppercase tracking-widest ml-1">Description <span class="text-muted/40 font-normal">(optional)</span></label>
           <textarea
             id="ws-desc"
             bind:value={description}
-            rows="2"
+            rows="3"
             placeholder="What's this workspace for?"
-            class="w-full rounded-lg border border-shell-border bg-shell-bg px-3 py-2.5 text-sm text-shell-ink placeholder-shell-subtle outline-none transition-colors focus:border-shell-accent focus:ring-1 focus:ring-shell-accent/30 resize-none"
+            class="w-full px-5 py-4 rounded-2xl border border-borderSoft bg-sidebar/20 text-charcoal font-medium focus:border-sage focus:ring-4 focus:ring-sage/5 transition-all outline-none resize-none"
           ></textarea>
         </div>
-        <div class="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" on:click={close}>Cancel</Button>
-          <Button type="submit" disabled={!name.trim() || loading} {loading}>
-            {loading ? "Creating…" : "Create Workspace"}
+
+        <div class="flex flex-col sm:flex-row gap-3 pt-4">
+          <Button variant="ghost" fullWidth={true} on:click={close}>Cancel</Button>
+          <Button type="submit" variant="sage" fullWidth={true} disabled={!name.trim() || loading} {loading}>
+            {loading ? "Creating…" : "Establish Workspace"}
           </Button>
         </div>
       </form>
